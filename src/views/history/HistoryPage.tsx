@@ -1,0 +1,211 @@
+'use client';
+
+import { useState } from 'react';
+import { Button, Card, Modal } from '@/shared/ui';
+import { useHistoryStore } from '@/entities/history';
+import { useHydration } from '@/shared/lib/use-hydration';
+import { SettlementResult } from '@/widgets/settlement-result';
+import type { SettlementHistory } from '@/shared/types';
+import Link from 'next/link';
+
+function formatDate(timestamp: number): string {
+  const d = new Date(timestamp);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}.${month}.${day}`;
+}
+
+function formatAmount(amount: number): string {
+  return amount.toLocaleString('ko-KR') + '원';
+}
+
+function MemberNamesText({ names }: { names: string[] }) {
+  if (names.length <= 3) {
+    return <span>{names.join(', ')}</span>;
+  }
+  return (
+    <span>
+      {names.slice(0, 3).join(', ')} 외 {names.length - 3}명
+    </span>
+  );
+}
+
+function HistoryDetail({ history }: { history: SettlementHistory }) {
+  const mainPayer = (() => {
+    const payerMap = new Map<string, number>();
+    for (const session of history.sessions) {
+      const prev = payerMap.get(session.payerId) || 0;
+      payerMap.set(session.payerId, prev + session.totalAmount);
+    }
+    let maxId = '';
+    let maxAmount = 0;
+    for (const [id, amount] of payerMap) {
+      if (amount > maxAmount) {
+        maxId = id;
+        maxAmount = amount;
+      }
+    }
+    return history.members.find((m) => m.id === maxId);
+  })();
+
+  return (
+    <div className="flex flex-col gap-3 mt-3 pt-3 border-t border-border">
+      {/* Transfer Summary */}
+      {history.transfers.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h4 className="text-sm font-semibold text-text-secondary">송금 요약</h4>
+          {history.transfers.map((t, i) => {
+            const fromMember = history.members.find((m) => m.id === t.from);
+            const toMember = history.members.find((m) => m.id === t.to);
+            return (
+              <div
+                key={i}
+                className="flex items-center justify-between rounded-xl bg-pastel-sky/30 px-3 py-2 text-sm"
+              >
+                <span className="text-text-primary">
+                  <strong>{fromMember?.name}</strong>
+                  {' → '}
+                  <strong>{toMember?.name}</strong>
+                </span>
+                <span className="font-bold text-primary-dark">
+                  {formatAmount(t.amount)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Settlement Details */}
+      <SettlementResult
+        results={history.results}
+        payerName={mainPayer?.name ?? '결제자'}
+      />
+    </div>
+  );
+}
+
+export function HistoryPage() {
+  const hydrated = useHydration();
+  const { histories, removeHistory } = useHistoryStore();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const handleToggleExpand = (id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      removeHistory(deleteTarget);
+      if (expandedId === deleteTarget) {
+        setExpandedId(null);
+      }
+      setDeleteTarget(null);
+    }
+  };
+
+  if (!hydrated) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-sm text-text-muted">로딩 중...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link href="/" aria-label="뒤로 가기">
+          <Button variant="ghost" size="sm">
+            &larr;
+          </Button>
+        </Link>
+        <h1 className="text-xl font-bold text-text-primary">정산 기록</h1>
+      </div>
+
+      {/* History List */}
+      {histories.length === 0 ? (
+        <Card className="text-center py-8">
+          <p className="text-text-muted">아직 정산 기록이 없습니다</p>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {histories.map((history) => (
+            <Card
+              key={history.id}
+              className="cursor-pointer transition-colors hover:bg-surface"
+              onClick={() => handleToggleExpand(history.id)}
+              role="button"
+              aria-expanded={expandedId === history.id}
+              aria-label={`${history.title} 정산 기록`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-text-secondary">
+                      {formatDate(history.createdAt)}
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      {history.sessionCount}차
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold text-text-primary">
+                    {formatAmount(history.totalAmount)}
+                  </p>
+                  <p className="text-sm text-text-secondary truncate">
+                    <MemberNamesText names={history.memberNames} />
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => handleDeleteClick(e, history.id)}
+                  aria-label={`${history.title} 삭제`}
+                >
+                  삭제
+                </Button>
+              </div>
+
+              {expandedId === history.id && (
+                <HistoryDetail history={history} />
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="정산 기록 삭제"
+      >
+        <p className="mb-4 text-text-secondary">
+          이 정산 기록을 삭제하시겠습니까?
+          <br />
+          삭제된 기록은 복구할 수 없습니다.
+        </p>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => setDeleteTarget(null)}
+          >
+            취소
+          </Button>
+          <Button variant="danger" fullWidth onClick={confirmDelete}>
+            삭제
+          </Button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
