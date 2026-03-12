@@ -1,15 +1,15 @@
 # 끼니끼리 (GGINI GGIRI)
 
 ## Project Overview
-다회차(N차) 모임의 복잡한 가변 인원 정산을 자동화하는 하이브리드 모바일 앱.
+다회차(N차) 모임의 복잡한 가변 인원 정산을 자동화하는 PWA.
 주류 미음용자 등 특정 항목 제외를 통한 정산의 정당성 확보.
 
 ## Tech Stack
-- **Framework**: Next.js 15+ (App Router), TypeScript (Strict Mode)
+- **Framework**: Next.js 16+ (App Router), TypeScript (Strict Mode)
 - **Architecture**: Feature-Sliced Design (FSD)
-- **Native Bridge**: Capacitor 6+
-- **State**: Zustand + persist (MMKV Storage)
-- **Styling**: NativeWind (Tailwind CSS v4)
+- **PWA**: manifest.json + Service Worker (Cache First)
+- **State**: Zustand + persist (localStorage)
+- **Styling**: Tailwind CSS v4
 - **Utilities**: big.js (정밀 연산), lz-string (URL 압축), nanoid (ID 생성)
 
 ## Core Data Schema

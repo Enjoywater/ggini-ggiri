@@ -1,7 +1,7 @@
 # 끼니끼리 (GGINI GGIRI)
 
-다회차(N차) 모임에서 인원과 조건이 계속 바뀌어도 공정하게 정산할 수 있도록 돕는 하이브리드 앱입니다.  
-웹(Next.js) 기반으로 동작하며, Capacitor를 통해 iOS/Android 앱으로 패키징할 수 있습니다.
+다회차(N차) 모임에서 인원과 조건이 계속 바뀌어도 공정하게 정산할 수 있도록 돕는 PWA입니다.
+Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.
 
 ## 1) 사용자 관점: 이 앱으로 할 수 있는 것
 
@@ -11,7 +11,7 @@
 - 자동 정산 결과 확인(개인별 부담 + 송금 요약)
 - 계좌 정보 저장 후 원클릭 복사
 - 정산 결과 공유
-  - 카카오톡 공유(앱 플러그인 사용)
+  - 카카오톡 공유 (준비 중)
   - 텍스트 공유/클립보드 복사 (세션별 내역 + 개인별 부담액 + 송금 요약 포함)
 - 정산 기록 자동 저장 및 기록 상세 조회
 - 공유 링크(`detail`)로 정산 상세 확인
@@ -34,7 +34,6 @@
 
 - Node.js: `22.14.0` (`.tool-versions` 기준)
 - npm
-- (모바일 빌드 시) Java 21, Android Studio, Xcode
 
 ### 설치
 
@@ -78,34 +77,16 @@ npm run build
 
 이 프로젝트는 `next.config.ts`에서 `output: "export"`를 사용하므로, 정적 산출물이 `out/`에 생성됩니다.
 
-### 프로덕션 서버 실행(Next 서버 모드)
+### PWA
 
-```bash
-npm run start
-```
+빌드 결과물(`out/`)을 정적 호스팅에 배포하면 PWA로 동작합니다.
 
-## 5) 모바일 앱 패키징 (Capacitor)
+- `manifest.json` — 앱 이름, 테마 컬러, standalone 모드 설정
+- `sw.js` — Service Worker (정적 에셋 캐시, 오프라인 지원)
 
-Capacitor 설정(`capacitor.config.ts`)에서 `webDir: "out"`을 사용합니다.  
-따라서 아래 순서로 진행합니다.
+사용자는 모바일 브라우저에서 **"홈 화면에 추가"** 를 통해 네이티브 앱처럼 사용할 수 있습니다.
 
-1. 웹 정적 빌드 생성
-2. Capacitor 플랫폼 동기화
-3. 네이티브 IDE에서 실행/아카이브
-
-```bash
-npm run build
-npx cap sync
-```
-
-플랫폼 열기:
-
-```bash
-npx cap open android
-npx cap open ios
-```
-
-## 6) 기술 스택
+## 5) 기술 스택
 
 - 프레임워크: Next.js 16 (App Router), React 19, TypeScript
 - 상태관리: Zustand + persist
@@ -113,10 +94,10 @@ npx cap open ios
 - 공유 데이터 압축: lz-string
 - 식별자 생성: nanoid
 - 스타일: Tailwind CSS v4
-- 모바일 브릿지: Capacitor (iOS/Android)
+- PWA: manifest.json + Service Worker
 - 테스트: Vitest
 
-## 7) 아키텍처
+## 6) 아키텍처
 
 Feature-Sliced Design(FSD) 구조를 따릅니다.
 
@@ -138,7 +119,7 @@ src/
 - `/settings` 설정(계좌/초기화)
 - `/detail?d=...` 공유 상세 화면
 
-## 8) 데이터 저장 및 보안 정책
+## 7) 데이터 저장 및 보안 정책
 
 - Zustand persist로 로컬 기기에 데이터 저장
   - 참여자, 세션, 계좌, 프리셋, 히스토리
@@ -147,7 +128,7 @@ src/
 - 복원 데이터에 계좌 정보 필드가 포함되면 차단
 - 문자열 sanitize로 기본적인 인젝션 위험 완화
 
-## 9) 테스트 범위
+## 8) 테스트 범위
 
 현재 다음 영역에 대한 단위 테스트가 포함되어 있습니다.
 
@@ -157,7 +138,7 @@ src/
 - 세션 복제 동작 (`session-duplication`)
 - UI 상태 동기화 (`alcohol-sync`)
 
-## 10) 개발 메모
+## 9) 개발 메모
 
 - 계좌 예금주가 참여자 목록에 없으면 메인 화면 진입 시 자동 추가됩니다.
 - 정산 페이지 진입 시 결과가 히스토리에 자동 저장됩니다(중복 저장 방지 처리 포함).

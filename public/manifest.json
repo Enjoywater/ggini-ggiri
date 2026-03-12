@@ -1,0 +1,9 @@
+{
+  "name": "끼니끼리 - N차 정산",
+  "short_name": "끼니끼리",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#18181b",
+  "background_color": "#18181b",
+  "icons": []
+}

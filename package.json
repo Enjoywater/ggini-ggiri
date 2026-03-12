@@ -11,8 +11,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@capacitor/android": "^8.2.0",
-    "@capacitor/ios": "^8.2.0",
     "big.js": "^7.0.1",
     "lz-string": "^1.5.0",
     "nanoid": "^5.1.6",
@@ -22,8 +20,6 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.2.0",
-    "@capacitor/core": "^8.2.0",
     "@tailwindcss/postcss": "^4",
     "@types/big.js": "^6.2.2",
     "@types/lz-string": "^1.5.0",

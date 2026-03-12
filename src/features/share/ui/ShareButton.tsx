@@ -27,7 +27,7 @@ export function ShareButton({ data, account, totalLabel }: ShareButtonProps) {
     try {
       const available = await isKakaoAvailable();
       if (!available) {
-        setError('카카오톡이 설치되어 있지 않습니다.');
+        setError('이 브라우저에서는 공유 기능을 지원하지 않습니다. 텍스트 공유를 이용해주세요.');
         return;
       }
 
