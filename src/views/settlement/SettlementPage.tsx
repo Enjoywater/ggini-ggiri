@@ -89,6 +89,8 @@ export function SettlementPage() {
         members,
         account,
         totalLabel: `${totalAmount.toLocaleString('ko-KR')}원`,
+        sessions,
+        results,
       });
       const result = await shareText(text);
       setTextShareStatus(result === 'copied' ? '클립보드에 복사되었습니다!' : '공유 완료!');
@@ -96,7 +98,7 @@ export function SettlementPage() {
     } catch {
       // 사용자가 공유를 취소한 경우
     }
-  }, [transfers, members, account, totalAmount]);
+  }, [transfers, members, account, totalAmount, sessions, results]);
 
   if (!hydrated) {
     return (

@@ -12,7 +12,7 @@
 - 계좌 정보 저장 후 원클릭 복사
 - 정산 결과 공유
   - 카카오톡 공유(앱 플러그인 사용)
-  - 텍스트 공유/클립보드 복사
+  - 텍스트 공유/클립보드 복사 (세션별 내역 + 개인별 부담액 + 송금 요약 포함)
 - 정산 기록 자동 저장 및 기록 상세 조회
 - 공유 링크(`detail`)로 정산 상세 확인
 
@@ -21,7 +21,8 @@
 - 세션 기본 부담액: `(총액 - 술값) / 참여인원`
 - 술값 부담액: `(주류 단가 x 수량) / 음주자 수`
 - 각 개인 부담액은 100원 단위 절사(`floor`)
-- 절사로 생긴 차액은 해당 세션 결제자에게 보정
+- 절사로 생긴 차액은 해당 세션 결제자에게 보정 (`adjustRemainder`)
+- 정산 상세(`settle()`)와 송금 계산(`calculateBalance()`)이 동일한 절사·보정 로직을 공유하여 금액 정합성 보장
 - 전체 합계(받을 돈/보낼 돈) 일치 보장
 - 송금 경로는 Greedy 방식으로 최소 동선에 가깝게 최적화
 
@@ -150,10 +151,11 @@ src/
 
 현재 다음 영역에 대한 단위 테스트가 포함되어 있습니다.
 
-- 정산 엔진 (`settlement-engine`, edge cases)
-- 공유/직렬화 (`text-share`, `serializer`)
+- 정산 엔진 (`settlement-engine`, edge cases, settle/calculateBalance 정합성)
+- 공유/직렬화 (`text-share` 세션별 내역 포함, `serializer`)
 - 스토어 무결성 (`store-integrity`, `history-store`, `preset-store`)
 - 세션 복제 동작 (`session-duplication`)
+- UI 상태 동기화 (`alcohol-sync`)
 
 ## 10) 개발 메모
 

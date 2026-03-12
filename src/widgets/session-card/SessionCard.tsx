@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardHeader, CardTitle, Input, Chip, Switch, Button } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
@@ -18,7 +17,7 @@ const PASTEL_COLORS = ['pink', 'lavender', 'mint', 'sky', 'peach'] as const;
 export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCardProps) {
   const members = useMemberStore((s) => s.members);
   const { updateSession, toggleParticipant, setAlcohol } = useSessionStore();
-  const [alcoholEnabled, setAlcoholEnabled] = useState(!!session.alcohol);
+  const alcoholEnabled = !!session.alcohol;
 
   const handleTitleChange = (title: string) => {
     updateSession(session.id, { title });
@@ -38,7 +37,6 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
   };
 
   const handleAlcoholToggle = (enabled: boolean) => {
-    setAlcoholEnabled(enabled);
     if (!enabled) {
       setAlcohol(session.id, undefined);
     } else {

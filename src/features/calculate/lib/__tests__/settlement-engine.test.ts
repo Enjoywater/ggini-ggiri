@@ -366,6 +366,184 @@ describe('optimizeTransfers', () => {
   });
 });
 
+// ── settle() vs calculateBalance() 정합성 검증 ──
+
+describe('settle() vs calculateBalance() 정합성', () => {
+  it('기본 정산: settle() totalAmount와 calculateBalance() 부담액 일치', () => {
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '1차',
+        totalAmount: 100000,
+        payerId: 'A',
+        participantIds: ['A', 'B', 'C', 'D'],
+      },
+    ];
+    const settleResults = settle(sessions, members4);
+    const balances = calculateBalance(sessions, members4);
+
+    // settle()의 totalAmount가 calculateBalance()의 부담액과 일치하는지 검증
+    // balance = 지출 - 부담 → 부담 = 지출 - balance
+    const payments = new Map<string, Big>([
+      ['A', new Big(100000)],
+      ['B', new Big(0)],
+      ['C', new Big(0)],
+      ['D', new Big(0)],
+    ]);
+    for (const r of settleResults) {
+      const paid = payments.get(r.memberId) ?? new Big(0);
+      const burden = new Big(r.totalAmount);
+      const expectedBalance = paid.minus(burden);
+      expect(expectedBalance.toNumber()).toBe(
+        balances.get(r.memberId)!.toNumber(),
+      );
+    }
+  });
+
+  it('주류 포함 정산: settle() totalAmount와 calculateBalance() 부담액 일치', () => {
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '술집',
+        totalAmount: 120000,
+        payerId: 'A',
+        participantIds: ['A', 'B', 'C', 'D'],
+        alcohol: { unitPrice: 5000, quantity: 4, drinkerIds: ['A', 'B', 'C'] },
+      },
+    ];
+    const settleResults = settle(sessions, members4);
+    const balances = calculateBalance(sessions, members4);
+
+    const payments = new Map<string, Big>([
+      ['A', new Big(120000)],
+      ['B', new Big(0)],
+      ['C', new Big(0)],
+      ['D', new Big(0)],
+    ]);
+    for (const r of settleResults) {
+      const paid = payments.get(r.memberId) ?? new Big(0);
+      const burden = new Big(r.totalAmount);
+      const expectedBalance = paid.minus(burden);
+      expect(expectedBalance.toNumber()).toBe(
+        balances.get(r.memberId)!.toNumber(),
+      );
+    }
+  });
+
+  it('나누어 떨어지지 않는 금액: Payer의 settle() subtotal이 adjustRemainder 보정 반영', () => {
+    // 13333원 3인 → 1인당 floor100(4444.33) = 4400
+    // 합: 4400*3 = 13200, 차액 133 → Payer(A)에게 가산
+    // A 부담: 4400 + 133 = 4533
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '카페',
+        totalAmount: 13333,
+        payerId: 'A',
+        participantIds: ['A', 'B', 'C'],
+      },
+    ];
+    const members3 = [
+      { id: 'A', name: '앨리스' },
+      { id: 'B', name: '밥' },
+      { id: 'C', name: '찰리' },
+    ];
+    const settleResults = settle(sessions, members3);
+    const balances = calculateBalance(sessions, members3);
+
+    const payments = new Map<string, Big>([
+      ['A', new Big(13333)],
+      ['B', new Big(0)],
+      ['C', new Big(0)],
+    ]);
+
+    // A의 subtotal이 adjustRemainder 보정값(4533)과 일치
+    const aResult = settleResults.find((r) => r.memberId === 'A')!;
+    expect(aResult.details[0].subtotal).toBe(4533);
+    expect(aResult.totalAmount).toBe(4533);
+
+    // B, C는 절사 그대로 4400
+    const bResult = settleResults.find((r) => r.memberId === 'B')!;
+    expect(bResult.totalAmount).toBe(4400);
+
+    // settle() totalAmount가 calculateBalance() 부담액과 일치
+    for (const r of settleResults) {
+      const paid = payments.get(r.memberId) ?? new Big(0);
+      const burden = new Big(r.totalAmount);
+      const expectedBalance = paid.minus(burden);
+      expect(expectedBalance.toNumber()).toBe(
+        balances.get(r.memberId)!.toNumber(),
+      );
+    }
+  });
+
+  it('settle() 결과의 subtotal 합계 = 세션 총액 (Payer 보정 포함)', () => {
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '카페',
+        totalAmount: 37000,
+        payerId: 'A',
+        participantIds: ['A', 'B', 'C'],
+      },
+    ];
+    const members3 = [
+      { id: 'A', name: '앨리스' },
+      { id: 'B', name: '밥' },
+      { id: 'C', name: '찰리' },
+    ];
+    const settleResults = settle(sessions, members3);
+
+    // 세션별 subtotal 합계가 세션 총액과 일치해야 함
+    const subtotalSum = settleResults.reduce((sum, r) => {
+      const sessionDetail = r.details.find((d) => d.sessionId === 's1');
+      return sum + (sessionDetail?.subtotal ?? 0);
+    }, 0);
+    expect(subtotalSum).toBe(37000);
+  });
+
+  it('다회차 가변인원: settle() totalAmount와 calculateBalance() 부담액 일치', () => {
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '1차 고기집',
+        totalAmount: 200000,
+        payerId: 'A',
+        participantIds: ['A', 'B', 'C', 'D'],
+        alcohol: {
+          unitPrice: 8000,
+          quantity: 3,
+          drinkerIds: ['A', 'B', 'C'],
+        },
+      },
+      {
+        id: 's2',
+        title: '2차 노래방',
+        totalAmount: 80000,
+        payerId: 'B',
+        participantIds: ['A', 'B', 'C'],
+      },
+    ];
+    const settleResults = settle(sessions, members4);
+    const balances = calculateBalance(sessions, members4);
+
+    const payments = new Map<string, Big>([
+      ['A', new Big(200000)],
+      ['B', new Big(80000)],
+      ['C', new Big(0)],
+      ['D', new Big(0)],
+    ]);
+    for (const r of settleResults) {
+      const paid = payments.get(r.memberId) ?? new Big(0);
+      const burden = new Big(r.totalAmount);
+      const expectedBalance = paid.minus(burden);
+      expect(expectedBalance.toNumber()).toBe(
+        balances.get(r.memberId)!.toNumber(),
+      );
+    }
+  });
+});
+
 // ── 엣지 케이스 ──
 
 describe('엣지 케이스', () => {

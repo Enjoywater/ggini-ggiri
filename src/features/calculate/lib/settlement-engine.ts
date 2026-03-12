@@ -156,36 +156,68 @@ export function optimizeTransfers(
 }
 
 /**
+ * 세션별 각 참여자의 조정된 부담액 맵을 반환 (adjustRemainder 적용)
+ * calculateBalance()와 동일한 절사 보정 로직을 공유하기 위해 추출
+ */
+function getAdjustedSessionShares(session: Session): Map<string, Big> {
+  const baseShare = calculateSessionShare(session);
+  const alcoholShare = calculateAlcoholShare(session);
+
+  const sessionShares = new Map<string, Big>();
+  for (const pid of session.participantIds) {
+    let share = baseShare;
+    if (session.alcohol?.drinkerIds.includes(pid)) {
+      share = share.plus(alcoholShare);
+    }
+    sessionShares.set(pid, floor100(share));
+  }
+
+  return adjustRemainder(
+    sessionShares,
+    session.payerId,
+    new Big(session.totalAmount),
+  );
+}
+
+/**
  * 전체 정산 결과를 SettlementResult[] 형태로 산출
  */
 export function settle(
   sessions: Session[],
   members: Member[],
 ): SettlementResult[] {
+  // 세션별 조정된 부담액 맵을 미리 계산 (calculateBalance()와 동일 로직)
+  const adjustedSharesBySession = sessions.map((s) => ({
+    session: s,
+    shares: getAdjustedSessionShares(s),
+  }));
+
   const results: SettlementResult[] = [];
 
   for (const member of members) {
     const details: SessionSettlement[] = [];
     let memberTotal = new Big(0);
 
-    for (const session of sessions) {
+    for (const { session, shares } of adjustedSharesBySession) {
       if (!session.participantIds.includes(member.id)) continue;
 
+      const adjustedSubtotal = shares.get(member.id) ?? new Big(0);
+
+      // 표시용 개별 항목 (baseAmount, alcoholAmount)은 절사 기준으로 표시
       const baseShare = calculateSessionShare(session);
       const alcoholShare =
         session.alcohol?.drinkerIds.includes(member.id)
           ? calculateAlcoholShare(session)
           : new Big(0);
 
-      const subtotal = floor100(baseShare.plus(alcoholShare));
-      memberTotal = memberTotal.plus(subtotal);
+      memberTotal = memberTotal.plus(adjustedSubtotal);
 
       details.push({
         sessionId: session.id,
         sessionTitle: session.title,
         baseAmount: Number(floor100(baseShare)),
         alcoholAmount: Number(floor100(alcoholShare)),
-        subtotal: Number(subtotal),
+        subtotal: Number(adjustedSubtotal),
       });
     }
 

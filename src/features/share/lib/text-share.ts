@@ -1,11 +1,13 @@
 import type { Transfer } from '@/features/calculate';
-import type { Member, UserAccount } from '@/shared/types';
+import type { Member, Session, SettlementResult, UserAccount } from '@/shared/types';
 
 interface TextShareOptions {
   transfers: Transfer[];
   members: Member[];
   account: UserAccount | null;
   totalLabel: string;
+  sessions?: Session[];
+  results?: SettlementResult[];
 }
 
 /** 정산 결과를 텍스트로 생성 */
@@ -14,18 +16,41 @@ export function buildSettlementText({
   members,
   account,
   totalLabel,
+  sessions,
+  results,
 }: TextShareOptions): string {
   const memberMap = new Map(members.map((m) => [m.id, m.name]));
 
   const lines: string[] = [
     '[끼니끼리 정산]',
     `총 ${totalLabel}`,
+  ];
+
+  // 세션별 요약 (납득성 근거 제공)
+  if (sessions && sessions.length > 0) {
+    lines.push('', '[세션별 내역]');
+    for (const session of sessions) {
+      const payerName = memberMap.get(session.payerId) ?? '?';
+      lines.push(`${session.title} ${session.totalAmount.toLocaleString('ko-KR')}원 (결제: ${payerName})`);
+    }
+  }
+
+  // 개인별 부담액 요약 (납득성 근거 제공)
+  if (results && results.length > 0) {
+    lines.push('', '[개인별 부담액]');
+    for (const r of results) {
+      lines.push(`${r.memberName}: ${r.totalAmount.toLocaleString('ko-KR')}원`);
+    }
+  }
+
+  lines.push(
     '',
+    '[송금 요약]',
     ...transfers.map(
       (t) =>
         `${memberMap.get(t.from) ?? '?'} → ${memberMap.get(t.to) ?? '?'} : ${t.amount.toLocaleString('ko-KR')}원`,
     ),
-  ];
+  );
 
   if (account) {
     lines.push('', '[입금 계좌]', `${account.bankName} ${account.accountNumber}`, `예금주: ${account.ownerName}`);
