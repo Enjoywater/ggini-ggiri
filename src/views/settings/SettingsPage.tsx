@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input, Card, CardTitle, Modal } from '@/shared/ui';
+import { Button, Input, Card, CardTitle, Modal, Chip } from '@/shared/ui';
 import { useAccountStore } from '@/entities/account';
+import { useThemeStore, type ThemeMode } from '@/entities/theme';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useHydration } from '@/shared/lib/use-hydration';
@@ -72,6 +73,9 @@ export function SettingsPage() {
         </Link>
         <h1 className="text-xl font-bold text-text-primary">설정</h1>
       </div>
+
+      {/* Theme Section */}
+      <ThemeToggle />
 
       {/* Account Section */}
       <Card>
@@ -146,5 +150,33 @@ export function SettingsPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+const themeOptions: { value: ThemeMode; label: string }[] = [
+  { value: 'light', label: '라이트' },
+  { value: 'dark', label: '다크' },
+  { value: 'system', label: '시스템' },
+];
+
+function ThemeToggle() {
+  const { mode, setMode } = useThemeStore();
+
+  return (
+    <Card>
+      <CardTitle className="mb-3">화면 설정</CardTitle>
+      <div className="flex gap-2">
+        {themeOptions.map((opt) => (
+          <Chip
+            key={opt.value}
+            selected={mode === opt.value}
+            color="sky"
+            onClick={() => setMode(opt.value)}
+          >
+            {opt.label}
+          </Chip>
+        ))}
+      </div>
+    </Card>
   );
 }
