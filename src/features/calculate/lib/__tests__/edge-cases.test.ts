@@ -101,14 +101,14 @@ describe('엣지 케이스: 고액 정산 (1000만원 이상)', () => {
     ];
     const balances = calculateBalance(sessions, members);
 
-    // 1인당: 10000000/3 = 3333333.33... → floor100 = 3333300
-    // 절사 합: 3333300 * 3 = 9999900
-    // 차액: 10000000 - 9999900 = 100 → A에게 가산
-    // A 부담: 3333300 + 100 = 3333400
-    // A 잔액: 10000000 - 3333400 = 6666600
-    expect(balances.get('A')!.toNumber()).toBe(6666600);
-    expect(balances.get('B')!.toNumber()).toBe(-3333300);
-    expect(balances.get('C')!.toNumber()).toBe(-3333300);
+    // 1인당: 10000000/3 = 3333333.33... → floor10 = 3333330
+    // 절사 합: 3333330 * 3 = 9999990
+    // 차액: 10000000 - 9999990 = 10 → A에게 가산
+    // A 부담: 3333330 + 10 = 3333340
+    // A 잔액: 10000000 - 3333340 = 6666660
+    expect(balances.get('A')!.toNumber()).toBe(6666660);
+    expect(balances.get('B')!.toNumber()).toBe(-3333330);
+    expect(balances.get('C')!.toNumber()).toBe(-3333330);
 
     // 합계 반드시 0
     let sum = new Big(0);
@@ -157,11 +157,12 @@ describe('엣지 케이스: 소액 정산 (100원 미만)', () => {
         participantIds: ['A', 'B'],
       },
     ];
-    // 1인당 49.5원 → floor100 = 0원
-    // 차액 99 - 0 = 99 → A에게 가산 (payer가 99원 전액 부담)
+    // 1인당 49.5원 → floor10 = 40원
+    // 절사 합: 40 * 2 = 80
+    // 차액: 99 - 80 = 19 → A에게 가산 → A 부담 = 40 + 19 = 59
     const balances = calculateBalance(sessions, members);
-    expect(balances.get('A')!.toNumber()).toBe(0); // 99 결제 - 99 부담 = 0
-    expect(balances.get('B')!.toNumber()).toBe(0); // 부담 0원
+    expect(balances.get('A')!.toNumber()).toBe(40); // 99 결제 - 59 부담 = 40
+    expect(balances.get('B')!.toNumber()).toBe(-40); // 부담 40원
   });
 
   it('총액 50원 단독 → 잔액 0', () => {
@@ -408,19 +409,18 @@ describe('엣지 케이스: 동일인 다중 결제', () => {
 // 2. floor100 및 adjustRemainder 추가 엣지 케이스
 // ═══════════════════════════════════════════════════════
 
-describe('floor100 추가 엣지 케이스', () => {
+describe('floor100 추가 엣지 케이스 (10원 단위)', () => {
   it('음수 금액 절사', () => {
-    // 음수 금액도 절사가 올바르게 동작하는지
     const result = floor100(new Big(-12345));
-    // Big.roundDown은 0방향으로 절사하므로 -12300이 될 수 있음
-    expect(result.toNumber()).toBe(-12300);
+    // Big.roundDown은 0방향으로 절사하므로 -12340
+    expect(result.toNumber()).toBe(-12340);
   });
 
   it('매우 큰 금액 절사', () => {
-    expect(floor100(new Big(999999999)).toNumber()).toBe(999999900);
+    expect(floor100(new Big(999999999)).toNumber()).toBe(999999990);
   });
 
-  it('100원 정확히 절사', () => {
+  it('10원 정확히 절사', () => {
     expect(floor100(new Big(100)).toNumber()).toBe(100);
   });
 

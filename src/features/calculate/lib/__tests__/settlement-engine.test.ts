@@ -25,21 +25,21 @@ const members4: Member[] = [
 
 // ── floor100 ──
 
-describe('floor100', () => {
-  it('정확히 100 단위인 금액은 변하지 않음', () => {
+describe('floor100 (10원 단위 절사)', () => {
+  it('정확히 10 단위인 금액은 변하지 않음', () => {
     expect(floor100(new Big(12300)).toNumber()).toBe(12300);
   });
 
-  it('100원 미만 절사', () => {
-    expect(floor100(new Big(12345)).toNumber()).toBe(12300);
+  it('10원 미만 절사', () => {
+    expect(floor100(new Big(12345)).toNumber()).toBe(12340);
   });
 
-  it('99원 → 0원', () => {
-    expect(floor100(new Big(99)).toNumber()).toBe(0);
+  it('9원 → 0원', () => {
+    expect(floor100(new Big(9)).toNumber()).toBe(0);
   });
 
   it('소수점 포함 금액 절사', () => {
-    expect(floor100(new Big(12567.89)).toNumber()).toBe(12500);
+    expect(floor100(new Big(12567.89)).toNumber()).toBe(12560);
   });
 
   it('0원 처리', () => {
@@ -275,11 +275,11 @@ describe('calculateBalance - 주류 포함 정산', () => {
 
     // 기본: (120000-20000)/4 = 25000
     // 술값: 20000/3 ≈ 6666.67
-    // 음주자 부담: 25000 + 6666.67 = 31666.67 → floor100 = 31600
-    // 비음주자 부담: 25000 → floor100 = 25000
-    // 절사 합: 31600*3 + 25000 = 119800
-    // 차액: 120000 - 119800 = 200 → Payer(A)에게 가산
-    // A 최종 부담: 31600 + 200 = 31800
+    // 음주자 부담: 25000 + 6666.67 = 31666.67 → floor10 = 31660
+    // 비음주자 부담: 25000 → floor10 = 25000
+    // 절사 합: 31660*3 + 25000 = 119980
+    // 차액: 120000 - 119980 = 20 → Payer(A)에게 가산
+    // A 최종 부담: 31660 + 20 = 31680
     expect(balances.get('D')!.toNumber()).toBe(-25000);
     // D는 순수 기본 부담만
   });
@@ -431,9 +431,9 @@ describe('settle() vs calculateBalance() 정합성', () => {
   });
 
   it('나누어 떨어지지 않는 금액: Payer의 settle() subtotal이 adjustRemainder 보정 반영', () => {
-    // 13333원 3인 → 1인당 floor100(4444.33) = 4400
-    // 합: 4400*3 = 13200, 차액 133 → Payer(A)에게 가산
-    // A 부담: 4400 + 133 = 4533
+    // 13333원 3인 → 1인당 floor10(4444.33) = 4440
+    // 합: 4440*3 = 13320, 차액 13 → Payer(A)에게 가산
+    // A 부담: 4440 + 13 = 4453
     const sessions: Session[] = [
       {
         id: 's1',
@@ -457,14 +457,14 @@ describe('settle() vs calculateBalance() 정합성', () => {
       ['C', new Big(0)],
     ]);
 
-    // A의 subtotal이 adjustRemainder 보정값(4533)과 일치
+    // A의 subtotal이 adjustRemainder 보정값(4453)과 일치
     const aResult = settleResults.find((r) => r.memberId === 'A')!;
-    expect(aResult.details[0].subtotal).toBe(4533);
-    expect(aResult.totalAmount).toBe(4533);
+    expect(aResult.details[0].subtotal).toBe(4453);
+    expect(aResult.totalAmount).toBe(4453);
 
-    // B, C는 절사 그대로 4400
+    // B, C는 절사 그대로 4440
     const bResult = settleResults.find((r) => r.memberId === 'B')!;
-    expect(bResult.totalAmount).toBe(4400);
+    expect(bResult.totalAmount).toBe(4440);
 
     // settle() totalAmount가 calculateBalance() 부담액과 일치
     for (const r of settleResults) {
@@ -601,11 +601,11 @@ describe('엣지 케이스', () => {
     ];
     const balances = calculateBalance(sessions, members);
 
-    // 1인당: 13333/3 ≈ 4444.33 → floor100 = 4400
-    // 절사 합: 4400*3 = 13200
-    // 차액: 13333 - 13200 = 133 → Payer(A) 추가 부담
-    // A 부담: 4400+133=4533, 지출 13333, 잔액: 13333-4533=8800
-    // B,C 부담: 4400, 잔액: -4400
+    // 1인당: 13333/3 ≈ 4444.33 → floor10 = 4440
+    // 절사 합: 4440*3 = 13320
+    // 차액: 13333 - 13320 = 13 → Payer(A) 추가 부담
+    // A 부담: 4440+13=4453, 지출 13333, 잔액: 13333-4453=8880
+    // B,C 부담: 4440, 잔액: -4440
     let sum = new Big(0);
     for (const v of balances.values()) sum = sum.plus(v);
     expect(sum.toNumber()).toBe(0);

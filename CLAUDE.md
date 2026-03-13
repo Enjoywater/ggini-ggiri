@@ -40,7 +40,7 @@ src/
 ## Settlement Algorithm
 - 세션 단가 = (총액 - 술값) / 참여인원
 - 술값 = 단가 × 수량 → 음주자에게만 균등 배분
-- 100원 단위 절사(Floor), 차액은 Payer 잔액에서 가감 → 합계 0 유지
+- 10원 단위 절사(Floor), 차액은 Payer 잔액에서 가감 → 합계 0 유지
 - big.js로 정밀 연산 수행
 
 ## Conventions

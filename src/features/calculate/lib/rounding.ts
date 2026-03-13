@@ -1,9 +1,8 @@
 import Big from 'big.js';
 
-/** 100원 단위 절사 (내림) */
+/** 10원 단위 절사 (내림) */
 export function floor100(amount: Big): Big {
-  // Big.js의 roundDown 모드(0)로 소수점 제거 후 100 단위 절사
-  const num = amount.div(100).round(0, Big.roundDown).times(100);
+  const num = amount.div(10).round(0, Big.roundDown).times(10);
   return num;
 }
 
