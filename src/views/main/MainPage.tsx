@@ -63,6 +63,7 @@ export function MainPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddMember();
@@ -359,6 +360,7 @@ export function MainPage() {
           value={presetName}
           onChange={(e) => setPresetName(e.target.value)}
           onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return;
             if (e.key === 'Enter') {
               e.preventDefault();
               handleSavePreset();
