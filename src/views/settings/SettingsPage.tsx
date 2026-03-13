@@ -7,6 +7,7 @@ import { useThemeStore, type ThemeMode } from '@/entities/theme';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useHydration } from '@/shared/lib/use-hydration';
+import { ExportImportButtons } from '@/features/export-import';
 import Link from 'next/link';
 
 export function SettingsPage() {
@@ -125,6 +126,15 @@ export function SettingsPage() {
         >
           전체 데이터 초기화
         </Button>
+      </Card>
+
+      {/* Backup & Restore */}
+      <Card>
+        <CardTitle className="mb-3">백업 및 복원</CardTitle>
+        <p className="mb-3 text-sm text-text-secondary">
+          정산 기록을 JSON 파일로 내보내거나, 이전에 내보낸 파일을 가져올 수 있습니다.
+        </p>
+        <ExportImportButtons />
       </Card>
 
       {/* Reset Confirmation */}

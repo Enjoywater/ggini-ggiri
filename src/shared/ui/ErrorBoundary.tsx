@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback ?? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div role="alert" className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-lg font-semibold text-text-primary mb-2">
               문제가 발생했습니다
             </p>

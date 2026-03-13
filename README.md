@@ -16,6 +16,8 @@ Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나
 - 다크모드 지원 (라이트/다크/시스템 자동 감지)
 - 정산 기록 자동 저장 및 기록 상세 조회
 - 공유 링크(`detail`)로 정산 상세 확인
+- 정산 기록 JSON Export/Import (데이터 백업 및 복원, 계좌 정보 자동 제외)
+- 접근성 지원 (ARIA 속성, 키보드 네비게이션, 모달 포커스 트랩)
 
 ## 2) 핵심 정산 규칙
 
@@ -131,13 +133,19 @@ src/
 
 ## 8) 테스트 범위
 
-현재 다음 영역에 대한 단위 테스트가 포함되어 있습니다.
+현재 다음 영역에 대한 단위 테스트가 포함되어 있습니다. (총 370개 테스트, 25개 파일)
 
 - 정산 엔진 (`settlement-engine`, edge cases, settle/calculateBalance 정합성)
 - 공유/직렬화 (`text-share` 세션별 내역 포함, `serializer`)
 - 스토어 무결성 (`store-integrity`, `history-store`, `preset-store`)
 - 세션 복제 동작 (`session-duplication`)
 - UI 상태 동기화 (`alcohol-sync`)
+- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`)
+- Export/Import (`validate`, `export`, `import`, `ExportImportButtons` — 스키마 검증, 보안 필터링, UI)
+- 접근성 (`accessibility` — ARIA 속성, 포커스 트랩, 키보드 네비게이션)
+- 유효성 검증 (`validators` — 계좌번호, 금액, 멤버명, 주류 수량/단가)
+- 에러 처리 (`error-handler` — AppError 타입, 사용자 취소 감지, 한국어 메시지)
+- 뷰 레이어 (`HistoryPage` — 목록 렌더링, expand/collapse, 삭제 플로우, 포맷터)
 
 ## 9) 개발 메모
 

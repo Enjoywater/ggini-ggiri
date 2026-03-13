@@ -44,6 +44,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
+        type="button"
         className={`
           inline-flex items-center justify-center font-medium
           transition-colors duration-150 ease-in-out
@@ -55,6 +56,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           ${className}
         `}
         disabled={disabled}
+        aria-disabled={disabled || undefined}
         {...props}
       >
         {children}

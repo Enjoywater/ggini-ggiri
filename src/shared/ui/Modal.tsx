@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef } from 'react';
 
 interface ModalProps {
   open: boolean;
@@ -9,8 +9,12 @@ interface ModalProps {
   children: ReactNode;
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = title ? 'modal-title' : undefined;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -32,9 +36,51 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     return () => dialog.removeEventListener('close', handleClose);
   }, [onClose]);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDialogElement>) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    },
+    [onClose],
+  );
+
   return (
     <dialog
       ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
       className="
         m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border-none
         bg-surface-elevated p-0 shadow-xl
@@ -44,11 +90,14 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       onClick={(e) => {
         if (e.target === dialogRef.current) onClose();
       }}
-      aria-label={title}
+      onKeyDown={handleKeyDown}
     >
       <div className="p-5">
         {title && (
-          <h2 className="mb-4 text-lg font-semibold text-text-primary">
+          <h2
+            id={titleId}
+            className="mb-4 text-lg font-semibold text-text-primary"
+          >
             {title}
           </h2>
         )}
