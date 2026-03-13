@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'ggini-v1';
+const CACHE_NAME = 'ggini-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());

@@ -142,11 +142,10 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Safe area support for mobile */
-.safe-area-top {
-  padding-top: env(safe-area-inset-top);
-}
-
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+/* Safe area support for mobile (iOS notch/dynamic island) */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

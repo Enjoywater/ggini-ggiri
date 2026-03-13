@@ -53,7 +53,7 @@ export default function RootLayout({
         <ThemeProvider />
         <ServiceWorkerRegistrar />
         <ErrorBoundary>
-          <div className="mx-auto min-h-dvh w-full max-w-md px-4 py-6 safe-area-top safe-area-bottom">
+          <div className="mx-auto min-h-dvh w-full max-w-md px-5 pt-12 pb-8">
             {children}
           </div>
         </ErrorBoundary>
