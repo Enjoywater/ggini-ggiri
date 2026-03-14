@@ -2,17 +2,19 @@
 
 import { useCallback, useState } from 'react';
 import { shareToKakao, isKakaoAvailable } from '../lib/kakao-share';
+import type { ShareableData } from '@/shared/lib/serializer';
 import type { UserAccount, Member } from '@/shared/types';
 import type { Transfer } from '@/features/calculate';
 
 interface ShareButtonProps {
+  data: ShareableData;
   transfers: Transfer[];
   members: Member[];
   account: UserAccount | null;
   totalLabel: string;
 }
 
-export function ShareButton({ transfers, members, account, totalLabel }: ShareButtonProps) {
+export function ShareButton({ data, transfers, members, account, totalLabel }: ShareButtonProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,13 +28,13 @@ export function ShareButton({ transfers, members, account, totalLabel }: ShareBu
         return;
       }
 
-      await shareToKakao({ transfers, members, account, totalLabel });
+      await shareToKakao({ data, transfers, members, account, totalLabel });
     } catch {
       setError('공유에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setSending(false);
     }
-  }, [transfers, members, account, totalLabel]);
+  }, [data, transfers, members, account, totalLabel]);
 
   return (
     <div className="flex flex-col items-center gap-2">

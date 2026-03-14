@@ -1,8 +1,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { decompressData } from '@/shared/lib/serializer';
+import { getShare } from '@/shared/lib/share-store';
 import type { ShareableData } from '@/shared/lib/serializer';
 import { Card, CardTitle, Button } from '@/shared/ui';
 import { Suspense } from 'react';
@@ -10,27 +11,71 @@ import Link from 'next/link';
 
 function DetailContent() {
   const searchParams = useSearchParams();
+  const shareId = searchParams.get('id');
+  const encoded = searchParams.get('d');
 
-  const result = useMemo<
-    { ok: true; data: ShareableData } | { ok: false; error: string }
+  // lz-string 압축 데이터 (기존 방식)
+  const compressedResult = useMemo<
+    { ok: true; data: ShareableData } | { ok: false; error: string } | null
   >(() => {
-    const encoded = searchParams.get('d');
-    if (!encoded) {
-      return { ok: false, error: '공유 데이터가 없습니다.' };
-    }
+    if (!encoded) return null;
     try {
       return { ok: true, data: decompressData(encoded) };
     } catch (e) {
       const msg = e instanceof Error ? e.message : '데이터 복원에 실패했습니다.';
       return { ok: false, error: msg };
     }
-  }, [searchParams]);
+  }, [encoded]);
 
-  if (!result.ok) {
+  // Supabase ID 기반 조회 (새 방식)
+  const [remoteResult, setRemoteResult] = useState<
+    { ok: true; data: ShareableData } | { ok: false; error: string } | null
+  >(null);
+  const [loading, setLoading] = useState(!!shareId);
+
+  useEffect(() => {
+    if (!shareId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const data = await getShare(shareId);
+        if (cancelled) return;
+        if (data) {
+          setRemoteResult({ ok: true, data });
+        } else {
+          setRemoteResult({ ok: false, error: '정산 데이터를 찾을 수 없습니다.' });
+        }
+      } catch {
+        if (!cancelled) {
+          setRemoteResult({ ok: false, error: '데이터를 불러오는데 실패했습니다.' });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [shareId]);
+
+  // 로딩 중
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-sm text-text-muted">정산 내역을 불러오는 중...</p>
+      </div>
+    );
+  }
+
+  // 결과 결정: ID 방식 우선, 없으면 압축 방식
+  const result = remoteResult ?? compressedResult;
+
+  if (!result || !result.ok) {
+    const error = result && !result.ok ? result.error : '공유 데이터가 없습니다.';
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Card className="bg-pastel-coral/20 text-center">
-          <p className="text-sm font-medium text-danger-dark">{result.error}</p>
+          <p className="text-sm font-medium text-danger-dark">{error}</p>
           <p className="mt-2 text-xs text-text-muted">
             링크가 잘못되었거나 만료되었을 수 있습니다.
           </p>
