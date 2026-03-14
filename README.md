@@ -9,7 +9,9 @@ Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나
 - N차별로 결제자, 참여자, 금액 입력
 - 술값 별도 정산(주류 단가/수량/음주자 지정)
 - 자동 정산 결과 확인(개인별 부담 + 송금 요약)
+- 송금 완료 체크 (송금 건별 완료 표시, 완료 카운트, 초기화)
 - 계좌 정보 저장 후 원클릭 복사
+- 입력 유효성 검증 (금액, 주류 단가/수량 인라인 피드백)
 - 정산 결과 공유
   - 카카오톡 공유 (준비 중)
   - 텍스트 공유/클립보드 복사 (세션별 내역 + 개인별 부담액 + 송금 요약 포함)
@@ -125,7 +127,7 @@ src/
 ## 7) 데이터 저장 및 보안 정책
 
 - Zustand persist로 로컬 기기에 데이터 저장
-  - 참여자, 세션, 계좌, 프리셋, 히스토리
+  - 참여자, 세션, 계좌, 프리셋, 히스토리, 송금 완료 상태
 - 공유 URL에는 계좌 정보 미포함
 - 공유 링크 복원 시 구조/타입 검증 수행
 - 복원 데이터에 계좌 정보 필드가 포함되면 차단
@@ -133,19 +135,20 @@ src/
 
 ## 8) 테스트 범위
 
-현재 다음 영역에 대한 단위 테스트가 포함되어 있습니다. (총 370개 테스트, 25개 파일)
+현재 다음 영역에 대한 단위 테스트가 포함되어 있습니다. (총 385개 테스트, 27개 파일)
 
 - 정산 엔진 (`settlement-engine`, edge cases, settle/calculateBalance 정합성)
 - 공유/직렬화 (`text-share` 세션별 내역 포함, `serializer`)
 - 스토어 무결성 (`store-integrity`, `history-store`, `preset-store`)
 - 세션 복제 동작 (`session-duplication`)
 - UI 상태 동기화 (`alcohol-sync`)
-- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`)
+- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`, `FormField`)
 - Export/Import (`validate`, `export`, `import`, `ExportImportButtons` — 스키마 검증, 보안 필터링, UI)
 - 접근성 (`accessibility` — ARIA 속성, 포커스 트랩, 키보드 네비게이션)
 - 유효성 검증 (`validators` — 계좌번호, 금액, 멤버명, 주류 수량/단가)
 - 에러 처리 (`error-handler` — AppError 타입, 사용자 취소 감지, 한국어 메시지)
 - 뷰 레이어 (`HistoryPage` — 목록 렌더링, expand/collapse, 삭제 플로우, 포맷터)
+- 송금 완료 스토어 (`transfer-completion` — toggle, reset, persist, 키 생성)
 
 ## 9) 개발 메모
 

@@ -1,8 +1,10 @@
 'use client';
 
-import { Card, CardHeader, CardTitle, Input, Chip, Switch, Button } from '@/shared/ui';
+import { useState } from 'react';
+import { Card, CardHeader, CardTitle, Input, Chip, Switch, Button, FormField } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
+import { validateSessionAmount, validateAlcoholUnitPrice, validateAlcoholQuantity } from '@/shared/lib/validators';
 import type { Session } from '@/shared/types';
 
 interface SessionCardProps {
@@ -18,6 +20,39 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
   const members = useMemberStore((s) => s.members);
   const { updateSession, toggleParticipant, setAlcohol } = useSessionStore();
   const alcoholEnabled = !!session.alcohol;
+
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [unitPriceError, setUnitPriceError] = useState<string | null>(null);
+  const [quantityError, setQuantityError] = useState<string | null>(null);
+
+  const handleAmountBlur = () => {
+    if (session.totalAmount === 0) {
+      setAmountError(null);
+      return;
+    }
+    const result = validateSessionAmount(session.totalAmount);
+    setAmountError(result.valid ? null : result.error ?? null);
+  };
+
+  const handleUnitPriceBlur = () => {
+    if (!session.alcohol) return;
+    if (session.alcohol.unitPrice === 0) {
+      setUnitPriceError(null);
+      return;
+    }
+    const result = validateAlcoholUnitPrice(session.alcohol.unitPrice);
+    setUnitPriceError(result.valid ? null : result.error ?? null);
+  };
+
+  const handleQuantityBlur = () => {
+    if (!session.alcohol) return;
+    if (session.alcohol.quantity === 0) {
+      setQuantityError(null);
+      return;
+    }
+    const result = validateAlcoholQuantity(session.alcohol.quantity);
+    setQuantityError(result.valid ? null : result.error ?? null);
+  };
 
   const handleTitleChange = (title: string) => {
     updateSession(session.id, { title });
@@ -119,15 +154,18 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
         />
 
         {/* Total Amount */}
-        <Input
-          label="총 금액"
-          type="text"
-          inputMode="numeric"
-          placeholder="0"
-          suffix="원"
-          value={formatAmount(session.totalAmount)}
-          onChange={(e) => handleAmountChange(e.target.value)}
-        />
+        <FormField error={amountError}>
+          <Input
+            label="총 금액"
+            type="text"
+            inputMode="numeric"
+            placeholder="0"
+            suffix="원"
+            value={formatAmount(session.totalAmount)}
+            onChange={(e) => handleAmountChange(e.target.value)}
+            onBlur={handleAmountBlur}
+          />
+        </FormField>
 
         {/* Payer Selection */}
         <div className="flex flex-col gap-1.5">
@@ -178,24 +216,30 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
         {alcoholEnabled && session.alcohol && (
           <div className="flex flex-col gap-3 rounded-xl bg-pastel-peach/30 p-3">
             <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="주류 단가"
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                suffix="원"
-                value={formatAmount(session.alcohol.unitPrice)}
-                onChange={(e) => handleAlcoholUnitPrice(e.target.value)}
-              />
-              <Input
-                label="수량"
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                suffix="병"
-                value={session.alcohol.quantity > 0 ? String(session.alcohol.quantity) : ''}
-                onChange={(e) => handleAlcoholQuantity(e.target.value)}
-              />
+              <FormField error={unitPriceError}>
+                <Input
+                  label="주류 단가"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  suffix="원"
+                  value={formatAmount(session.alcohol.unitPrice)}
+                  onChange={(e) => handleAlcoholUnitPrice(e.target.value)}
+                  onBlur={handleUnitPriceBlur}
+                />
+              </FormField>
+              <FormField error={quantityError}>
+                <Input
+                  label="수량"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  suffix="병"
+                  value={session.alcohol.quantity > 0 ? String(session.alcohol.quantity) : ''}
+                  onChange={(e) => handleAlcoholQuantity(e.target.value)}
+                  onBlur={handleQuantityBlur}
+                />
+              </FormField>
             </div>
 
             <div className="flex flex-col gap-1.5">

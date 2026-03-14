@@ -6,13 +6,13 @@ import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
 import { useHistoryStore } from '@/entities/history';
+import { useTransferCompletionStore, getTransferKey } from '@/entities/transfer-completion';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { settle, calculateBalance, optimizeTransfers } from '@/features/calculate';
 // import { ShareButton } from '@/features/share'; // 카카오톡 SDK 연동 전까지 비활성화
 import { buildSettlementText, shareText } from '@/features/share/lib/text-share';
 import { SettlementResult } from '@/widgets/settlement-result';
 import type { Transfer } from '@/features/calculate';
-import type { ShareableData } from '@/shared/lib/serializer';
 import Link from 'next/link';
 
 export function SettlementPage() {
@@ -21,6 +21,9 @@ export function SettlementPage() {
   const sessions = useSessionStore((s) => s.sessions);
   const account = useAccountStore((s) => s.account);
   const [textShareStatus, setTextShareStatus] = useState<string | null>(null);
+  const completions = useTransferCompletionStore((s) => s.completions);
+  const toggleCompletion = useTransferCompletionStore((s) => s.toggleCompletion);
+  const resetCompletions = useTransferCompletionStore((s) => s.reset);
 
   const { results, transfers } = useMemo(() => {
     if (sessions.length === 0 || members.length === 0) {
@@ -76,11 +79,6 @@ export function SettlementPage() {
     savedRef.current = true;
   }, [results, transfers, members, sessions, totalAmount]);
 
-  const shareData: ShareableData = useMemo(
-    () => ({ members, sessions, settlement: results }),
-    [members, sessions, results],
-  );
-
   const handleTextShare = useCallback(async () => {
     setTextShareStatus(null);
     try {
@@ -121,32 +119,72 @@ export function SettlementPage() {
       </div>
 
       {/* Transfer Summary */}
-      {transfers.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-base font-semibold text-text-secondary">
-            송금 요약
-          </h2>
-          {transfers.map((t, i) => {
-            const fromMember = members.find((m) => m.id === t.from);
-            const toMember = members.find((m) => m.id === t.to);
-            return (
-              <div
-                key={i}
-                className="flex items-center justify-between rounded-xl bg-pastel-sky/30 px-4 py-3"
-              >
-                <span className="text-base text-text-primary">
-                  <strong>{fromMember?.name}</strong>
-                  {' → '}
-                  <strong>{toMember?.name}</strong>
+      {transfers.length > 0 && (() => {
+        const completedCount = transfers.filter((t) => {
+          const key = getTransferKey(t.from, t.to, t.amount);
+          return !!completions[key];
+        }).length;
+        const hasAnyCompleted = completedCount > 0;
+
+        return (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-text-secondary">
+                송금 요약
+              </h2>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text-muted">
+                  {completedCount}/{transfers.length} 완료
                 </span>
-                <span className="text-lg font-bold text-primary-dark">
-                  {t.amount.toLocaleString('ko-KR')}원
-                </span>
+                {hasAnyCompleted && (
+                  <Button variant="ghost" size="sm" onClick={resetCompletions}>
+                    초기화
+                  </Button>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+            {transfers.map((t, i) => {
+              const key = getTransferKey(t.from, t.to, t.amount);
+              const completed = !!completions[key];
+              const fromMember = members.find((m) => m.id === t.from);
+              const toMember = members.find((m) => m.id === t.to);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => toggleCompletion(key)}
+                  aria-label={`${fromMember?.name} → ${toMember?.name} ${t.amount.toLocaleString('ko-KR')}원 송금 완료 토글`}
+                  className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
+                    completed
+                      ? 'bg-pastel-mint/30'
+                      : 'bg-pastel-sky/30'
+                  }`}
+                >
+                  <span
+                    className={`text-base text-text-primary ${
+                      completed ? 'line-through opacity-60' : ''
+                    }`}
+                  >
+                    <span className="mr-2 inline-block w-5 text-center">
+                      {completed ? '\u2705' : '\u2B1C'}
+                    </span>
+                    <strong>{fromMember?.name}</strong>
+                    {' \u2192 '}
+                    <strong>{toMember?.name}</strong>
+                  </span>
+                  <span
+                    className={`text-lg font-bold text-primary-dark ${
+                      completed ? 'line-through opacity-60' : ''
+                    }`}
+                  >
+                    {t.amount.toLocaleString('ko-KR')}원
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Detail per member */}
       <SettlementResult
