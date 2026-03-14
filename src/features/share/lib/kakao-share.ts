@@ -1,52 +1,57 @@
 import { loadKakaoSDK } from '@/shared/lib/kakao-sdk';
-import type { UserAccount } from '@/shared/types';
+import type { UserAccount, Member } from '@/shared/types';
+import type { Transfer } from '@/features/calculate';
 
 const APP_URL_BASE = typeof window !== 'undefined'
   ? window.location.origin
   : 'https://ggini-ggiri.app';
 
 interface CreateShareOptions {
+  transfers: Transfer[];
+  members: Member[];
   account: UserAccount | null;
   totalLabel: string;
 }
 
 /**
- * 카카오톡 Feed 템플릿으로 정산 알림 공유
- * - 모바일 패킷 사이즈 제한(10KB)으로 압축 데이터 URL 미포함
- * - 상세 내역은 텍스트 공유로 안내
+ * 카카오톡 Feed 템플릿으로 정산 내역 공유
+ * - 카드 description에 송금 요약을 포함하여 클릭 없이 내용 확인 가능
  */
 export async function shareToKakao({
+  transfers,
+  members,
   account,
   totalLabel,
 }: CreateShareOptions): Promise<void> {
   await loadKakaoSDK();
 
-  const linkUrl = APP_URL_BASE;
+  const memberMap = new Map(members.map((m) => [m.id, m.name]));
 
-  const descriptionLines = [`총 ${totalLabel}`];
+  const lines: string[] = [];
+
+  // 송금 요약
+  for (const t of transfers) {
+    const from = memberMap.get(t.from) ?? '?';
+    const to = memberMap.get(t.to) ?? '?';
+    lines.push(`${from} → ${to} : ${t.amount.toLocaleString('ko-KR')}원`);
+  }
+
+  // 계좌 정보
   if (account) {
-    descriptionLines.push(`${account.bankName} ${account.accountNumber}`);
+    lines.push('', `[입금계좌] ${account.bankName} ${account.accountNumber}`);
+    lines.push(`예금주: ${account.ownerName}`);
   }
 
   window.Kakao.Share.sendDefault({
     objectType: 'feed',
     content: {
-      title: '끼니끼리 정산 내역',
-      description: descriptionLines.join('\n'),
+      title: `끼니끼리 정산 | 총 ${totalLabel}`,
+      description: lines.join('\n'),
       link: {
-        mobileWebUrl: linkUrl,
-        webUrl: linkUrl,
+        mobileWebUrl: APP_URL_BASE,
+        webUrl: APP_URL_BASE,
       },
     },
-    buttons: [
-      {
-        title: '끼니끼리 열기',
-        link: {
-          mobileWebUrl: linkUrl,
-          webUrl: linkUrl,
-        },
-      },
-    ],
   });
 }
 

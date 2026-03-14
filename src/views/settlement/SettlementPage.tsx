@@ -195,6 +195,8 @@ export function SettlementPage() {
       {/* Share */}
       <div className="flex flex-col gap-2">
         <ShareButton
+          transfers={transfers}
+          members={members}
           account={account}
           totalLabel={`${totalAmount.toLocaleString('ko-KR')}원`}
         />
