@@ -52,6 +52,15 @@ export async function shareToKakao({
         webUrl: APP_URL_BASE,
       },
     },
+    buttons: [
+      {
+        title: '끼니끼리 사용해보기',
+        link: {
+          mobileWebUrl: APP_URL_BASE,
+          webUrl: APP_URL_BASE,
+        },
+      },
+    ],
   });
 }
 
