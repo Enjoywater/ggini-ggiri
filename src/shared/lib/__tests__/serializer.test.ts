@@ -144,20 +144,20 @@ describe('serializer: XSS 방어', () => {
 
 describe('serializer: 계좌 정보 보안', () => {
   it('accountNumber 포함 데이터 → 에러', () => {
-    const data = makeValidData() as Record<string, unknown>;
+    const data = makeValidData() as unknown as Record<string, unknown>;
     (data as { account?: unknown }).account = {
       accountNumber: '110-123-456789',
       bankName: '국민은행',
       ownerName: '앨리스',
     };
-    const compressed = compressData(data as ShareableData);
+    const compressed = compressData(data as unknown as ShareableData);
     expect(() => decompressData(compressed)).toThrow('보안 위반');
   });
 
   it('bankName 포함 데이터 → 에러', () => {
-    const data = makeValidData() as Record<string, unknown>;
+    const data = makeValidData() as unknown as Record<string, unknown>;
     (data as { bankInfo?: unknown }).bankInfo = { bankName: '신한은행' };
-    const compressed = compressData(data as ShareableData);
+    const compressed = compressData(data as unknown as ShareableData);
     expect(() => decompressData(compressed)).toThrow('보안 위반');
   });
 });
