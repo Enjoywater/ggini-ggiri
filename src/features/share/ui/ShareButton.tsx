@@ -1,17 +1,15 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import type { ShareableData } from '@/shared/lib/serializer';
 import { shareToKakao, isKakaoAvailable } from '../lib/kakao-share';
 import type { UserAccount } from '@/shared/types';
 
 interface ShareButtonProps {
-  data: ShareableData;
   account: UserAccount | null;
   totalLabel: string;
 }
 
-export function ShareButton({ data, account, totalLabel }: ShareButtonProps) {
+export function ShareButton({ account, totalLabel }: ShareButtonProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,13 +23,13 @@ export function ShareButton({ data, account, totalLabel }: ShareButtonProps) {
         return;
       }
 
-      await shareToKakao({ data, account, totalLabel });
+      await shareToKakao({ account, totalLabel });
     } catch {
       setError('공유에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setSending(false);
     }
-  }, [data, account, totalLabel]);
+  }, [account, totalLabel]);
 
   return (
     <div className="flex flex-col items-center gap-2">
