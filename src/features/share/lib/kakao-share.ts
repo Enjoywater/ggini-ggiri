@@ -36,7 +36,6 @@ export async function shareToKakao({
     content: {
       title: '끼니끼리 정산 내역',
       description: descriptionLines.join('\n'),
-      imageUrl: `${APP_URL_BASE}/og-image.png`,
       link: {
         mobileWebUrl: detailUrl,
         webUrl: detailUrl,
