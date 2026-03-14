@@ -9,6 +9,7 @@ export interface ShareableData {
   members: Member[];
   sessions: Session[];
   settlement: SettlementResult[];
+  transfers?: Array<{ from: string; to: string; amount: number }>;
 }
 
 const MAX_DECOMPRESSED_SIZE = 100_000;

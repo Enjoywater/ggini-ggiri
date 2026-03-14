@@ -89,7 +89,7 @@ function DetailContent() {
     );
   }
 
-  const { members, sessions, settlement } = result.data;
+  const { members, sessions, settlement, transfers } = result.data;
   const memberMap = new Map(members.map((m) => [m.id, m.name]));
 
   return (
@@ -100,6 +100,28 @@ function DetailContent() {
           {sessions.length}개 차수 / {members.length}명 참여
         </p>
       </div>
+
+      {/* Transfer summary */}
+      {transfers && transfers.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold text-text-secondary">송금 요약</h2>
+          {transfers.map((t, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-xl bg-pastel-sky/30 px-4 py-3"
+            >
+              <span className="text-base text-text-primary">
+                <strong>{memberMap.get(t.from) ?? '?'}</strong>
+                {' → '}
+                <strong>{memberMap.get(t.to) ?? '?'}</strong>
+              </span>
+              <span className="text-lg font-bold text-primary-dark">
+                {t.amount.toLocaleString('ko-KR')}원
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Session breakdown */}
       <div className="flex flex-col gap-3">

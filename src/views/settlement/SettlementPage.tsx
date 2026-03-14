@@ -195,7 +195,7 @@ export function SettlementPage() {
       {/* Share */}
       <div className="flex flex-col gap-2">
         <ShareButton
-          data={{ members, sessions, settlement: results }}
+          data={{ members, sessions, settlement: results, transfers: transfers.map((t) => ({ from: t.from, to: t.to, amount: t.amount })) }}
           transfers={transfers}
           members={members}
           account={account}
