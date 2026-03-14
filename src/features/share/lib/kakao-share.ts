@@ -1,55 +1,63 @@
 import type { ShareableData } from '@/shared/lib/serializer';
 import { compressData } from '@/shared/lib/serializer';
+import { loadKakaoSDK } from '@/shared/lib/kakao-sdk';
 import type { UserAccount } from '@/shared/types';
 
-/** 앱 URL 스킴 또는 웹 URL 베이스 */
 const APP_URL_BASE = typeof window !== 'undefined'
   ? window.location.origin
   : 'https://ggini-ggiri.app';
 
 interface CreateShareOptions {
   data: ShareableData;
-  account: UserAccount;
+  account: UserAccount | null;
   totalLabel: string;
 }
 
 /**
- * 카카오톡 피드 템플릿 카드 생성 및 공유
- * TODO: 카카오 JS SDK 연동 시 구현 예정
+ * 카카오톡 Feed 템플릿으로 정산 내역 공유
  */
 export async function shareToKakao({
   data,
   account,
   totalLabel,
 }: CreateShareOptions): Promise<void> {
+  await loadKakaoSDK();
+
   const compressed = compressData(data);
   const detailUrl = `${APP_URL_BASE}/detail?d=${compressed}`;
 
-  const description = [
-    `총 ${totalLabel}`,
-    ``,
-    `[입금 계좌]`,
-    `${account.bankName} ${account.accountNumber}`,
-    `예금주: ${account.ownerName}`,
-  ].join('\n');
-
-  // 카카오 JS SDK 미연동 상태 — Web Share API 폴백
-  if (navigator.share) {
-    await navigator.share({
-      title: '끼니끼리 정산 내역',
-      text: description,
-      url: detailUrl,
-    });
-  } else {
-    throw new Error('카카오톡 공유는 아직 준비 중입니다. 텍스트 공유를 이용해주세요.');
+  const descriptionLines = [`총 ${totalLabel}`];
+  if (account) {
+    descriptionLines.push(`${account.bankName} ${account.accountNumber}`);
   }
+
+  window.Kakao.Share.sendDefault({
+    objectType: 'feed',
+    content: {
+      title: '끼니끼리 정산 내역',
+      description: descriptionLines.join('\n'),
+      imageUrl: `${APP_URL_BASE}/og-image.png`,
+      link: {
+        mobileWebUrl: detailUrl,
+        webUrl: detailUrl,
+      },
+    },
+    buttons: [
+      {
+        title: '정산 내역 보기',
+        link: {
+          mobileWebUrl: detailUrl,
+          webUrl: detailUrl,
+        },
+      },
+    ],
+  });
 }
 
 /**
- * 카카오톡 설치 여부 확인
- * TODO: 카카오 JS SDK 연동 시 구현 예정
+ * 카카오톡 공유 가능 여부 확인
+ * - JS 키가 설정되어 있고 브라우저 환경이면 사용 가능
  */
 export async function isKakaoAvailable(): Promise<boolean> {
-  // 웹 환경에서는 Web Share API 지원 여부로 대체
-  return typeof navigator !== 'undefined' && !!navigator.share;
+  return typeof window !== 'undefined' && !!process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
 }

@@ -9,7 +9,7 @@ import { useHistoryStore } from '@/entities/history';
 import { useTransferCompletionStore, getTransferKey } from '@/entities/transfer-completion';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { settle, calculateBalance, optimizeTransfers } from '@/features/calculate';
-// import { ShareButton } from '@/features/share'; // 카카오톡 SDK 연동 전까지 비활성화
+import { ShareButton } from '@/features/share';
 import { buildSettlementText, shareText } from '@/features/share/lib/text-share';
 import { SettlementResult } from '@/widgets/settlement-result';
 import type { Transfer } from '@/features/calculate';
@@ -194,13 +194,11 @@ export function SettlementPage() {
 
       {/* Share */}
       <div className="flex flex-col gap-2">
-        {/* 카카오톡 공유 — SDK 연동 전까지 비활성화
         <ShareButton
-          data={shareData}
+          data={{ members, sessions, settlement: results }}
           account={account}
           totalLabel={`${totalAmount.toLocaleString('ko-KR')}원`}
         />
-        */}
         <Button
           variant="secondary"
           fullWidth
