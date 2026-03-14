@@ -15,6 +15,8 @@ interface CreateShareOptions {
 
 /**
  * 카카오톡 Feed 템플릿으로 정산 내역 공유
+ * - 압축 데이터가 URL 길이 제한을 초과할 수 있으므로
+ *   detail 링크는 데이터 크기에 따라 포함 여부 결정
  */
 export async function shareToKakao({
   data,
@@ -25,6 +27,11 @@ export async function shareToKakao({
 
   const compressed = compressData(data);
   const detailUrl = `${APP_URL_BASE}/detail?d=${compressed}`;
+  const homeUrl = APP_URL_BASE;
+
+  // 카카오 SDK는 URL 길이가 너무 길면 4002 에러 발생
+  const useDetailLink = detailUrl.length <= 2000;
+  const linkUrl = useDetailLink ? detailUrl : homeUrl;
 
   const descriptionLines = [`총 ${totalLabel}`];
   if (account) {
@@ -37,16 +44,16 @@ export async function shareToKakao({
       title: '끼니끼리 정산 내역',
       description: descriptionLines.join('\n'),
       link: {
-        mobileWebUrl: detailUrl,
-        webUrl: detailUrl,
+        mobileWebUrl: linkUrl,
+        webUrl: linkUrl,
       },
     },
     buttons: [
       {
-        title: '정산 내역 보기',
+        title: useDetailLink ? '정산 내역 보기' : '끼니끼리 열기',
         link: {
-          mobileWebUrl: detailUrl,
-          webUrl: detailUrl,
+          mobileWebUrl: linkUrl,
+          webUrl: linkUrl,
         },
       },
     ],
