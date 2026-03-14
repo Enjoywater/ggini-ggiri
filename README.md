@@ -13,7 +13,7 @@ Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나
 - 계좌 정보 저장 후 원클릭 복사
 - 입력 유효성 검증 (금액, 주류 단가/수량 인라인 피드백)
 - 정산 결과 공유
-  - 카카오톡 공유 (준비 중)
+  - 카카오톡 공유 (Kakao JS SDK Feed 템플릿 — 송금 요약 + 계좌 정보 + 상세 링크)
   - 텍스트 공유/클립보드 복사 (세션별 내역 + 개인별 부담액 + 송금 요약 포함)
 - 다크모드 지원 (라이트/다크/시스템 자동 감지)
 - 정산 기록 자동 저장 및 기록 상세 조회
@@ -80,7 +80,10 @@ npm run lint
 npm run build
 ```
 
-이 프로젝트는 `next.config.ts`에서 `output: "export"`를 사용하므로, 정적 산출물이 `out/`에 생성됩니다.
+Vercel에 배포 중이며, 환경변수 설정이 필요합니다:
+- `NEXT_PUBLIC_KAKAO_JS_KEY` — 카카오 JavaScript 앱 키
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase 프로젝트 URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon 키
 
 ### PWA
 
@@ -97,6 +100,8 @@ npm run build
 - 상태관리: Zustand + persist
 - 정산 연산: big.js
 - 공유 데이터 압축: lz-string
+- 공유 데이터 저장: Supabase (PostgreSQL)
+- 카카오톡 공유: Kakao JS SDK
 - 식별자 생성: nanoid
 - 스타일: Tailwind CSS v4
 - PWA: manifest.json + Service Worker
@@ -122,13 +127,15 @@ src/
 - `/settlement` 정산 결과
 - `/history` 정산 기록
 - `/settings` 설정(테마/계좌/초기화)
-- `/detail?d=...` 공유 상세 화면
+- `/detail?id=...` 공유 상세 화면 (Supabase), `/detail?d=...` (lz-string 하위 호환)
 
 ## 7) 데이터 저장 및 보안 정책
 
 - Zustand persist로 로컬 기기에 데이터 저장
   - 참여자, 세션, 계좌, 프리셋, 히스토리, 송금 완료 상태
+- 공유 데이터는 Supabase에 저장, 짧은 ID로 접근 (`/detail?id=xxx`)
 - 공유 URL에는 계좌 정보 미포함
+- 카카오톡 카드의 description에 계좌 정보 표시 (URL에는 미포함)
 - 공유 링크 복원 시 구조/타입 검증 수행
 - 복원 데이터에 계좌 정보 필드가 포함되면 차단
 - 문자열 sanitize로 기본적인 인젝션 위험 완화

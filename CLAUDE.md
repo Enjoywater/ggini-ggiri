@@ -11,6 +11,7 @@
 - **State**: Zustand + persist (localStorage)
 - **Styling**: Tailwind CSS v4
 - **Utilities**: big.js (정밀 연산), lz-string (URL 압축), nanoid (ID 생성)
+- **Share**: Kakao JS SDK (카카오톡 공유), Supabase (공유 데이터 저장)
 
 ## Core Data Schema
 ```typescript
@@ -24,18 +25,18 @@ interface UserAccount { bankName: string; accountNumber: string; ownerName: stri
 ```
 src/
 ├── app/           # Next.js App Router (pages, layouts)
-├── pages/         # FSD pages (compose widgets → full pages)
+├── views/         # Page-level compositions (MainPage, SettlementPage, etc.)
 ├── widgets/       # Complex UI blocks (SessionCard, SettlementResult)
-├── features/      # User interactions (add-session, toggle-participant, calculate)
-├── entities/      # Business entities (member, session, account)
-├── shared/        # Reusable: ui/, lib/, api/, config/, types/
+├── features/      # User interactions (add-session, toggle-participant, calculate, share)
+├── entities/      # Business entities (member, session, account, history, preset, theme, transfer-completion)
+├── shared/        # Reusable: ui/, lib/, types/
 ```
 
 ## Product Principles
 1. **Logical Fairness**: 모든 금액은 데이터 기반 산출, 수신자 납득 가능한 근거 제공
 2. **Zero-Friction UX**: 최소 터치(Binary Toggle)로 모든 입력 완료
-3. **Security by Design**: 계좌 정보는 URL 미포함, 메시지 본문에만 격리
-4. **Local-First**: MMKV 로컬 저장, DB 운영 비용 제로
+3. **Security by Design**: 계좌 정보는 공유 URL 미포함, 카카오 카드/텍스트 메시지에만 표시
+4. **Local-First**: localStorage 로컬 저장, Supabase는 공유 링크 생성 목적으로만 사용
 
 ## Settlement Algorithm
 - 세션 단가 = (총액 - 술값) / 참여인원
