@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { parseImportFile, extractHistory } from '../import';
 import type { ExportData } from '../export';
 
+// vi.mock은 Vitest에 의해 파일 최상위로 호이스팅되므로 명시적으로 최상위에 선언
+vi.mock('@/shared/lib/nanoid', () => ({
+  createId: () => 'mock-id-000000',
+}));
+
 function makeValidExportJson(): string {
   return JSON.stringify({
     version: 1,
@@ -72,11 +77,6 @@ describe('parseImportFile', () => {
 
 describe('extractHistory', () => {
   it('올바른 SettlementHistory 배열을 반환한다', () => {
-    // nanoid를 모킹
-    vi.mock('@/shared/lib/nanoid', () => ({
-      createId: () => 'mock-id',
-    }));
-
     const exportData: ExportData = {
       version: 1,
       exportedAt: '2026-03-13T00:00:00.000Z',

@@ -1,23 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { formatDate, formatAmount } from '@/shared/lib/formatters';
 
 // ═══════════════════════════════════════════════════════
 // HistoryPage 포맷터 함수 테스트
-// formatDate, formatAmount는 모듈 내부 함수이므로 동일 로직을 재현하여 테스트
 // ═══════════════════════════════════════════════════════
-
-// Replicate the internal formatDate logic from HistoryPage.tsx:11-17
-function formatDate(timestamp: number): string {
-  const d = new Date(timestamp);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}.${month}.${day}`;
-}
-
-// Replicate the internal formatAmount logic from HistoryPage.tsx:19-21
-function formatAmount(amount: number): string {
-  return amount.toLocaleString('ko-KR') + '원';
-}
 
 describe('formatDate', () => {
   it('타임스탬프를 YYYY.MM.DD 형식으로 변환', () => {

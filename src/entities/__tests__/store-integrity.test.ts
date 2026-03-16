@@ -280,12 +280,13 @@ describe('통합 테스트: 전체 유저 저니', () => {
     const shareData = { members, sessions, settlement: results };
     const compressed = compressData(shareData);
 
-    // URL에 계좌 정보가 포함되지 않았는지 확인
-    expect(compressed).not.toContain('accountNumber');
-    expect(compressed).not.toContain('3333-01-1234567');
-
     // 복원 가능한지 확인
     const restored = decompressData(compressed);
+
+    // 복원된 데이터에 계좌 정보가 포함되지 않았는지 확인
+    const restoredJson = JSON.stringify(restored);
+    expect(restoredJson).not.toContain('accountNumber');
+    expect(restoredJson).not.toContain('3333-01-1234567');
     expect(restored.members.length).toBe(3);
     expect(restored.sessions.length).toBe(2);
     expect(restored.settlement.length).toBe(3);
