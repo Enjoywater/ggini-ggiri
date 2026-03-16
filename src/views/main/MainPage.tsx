@@ -45,6 +45,14 @@ export function MainPage() {
   const [showDeletePresetModal, setShowDeletePresetModal] = useState(false);
   const [pendingDeletePresetId, setPendingDeletePresetId] = useState<string | null>(null);
 
+  // Session delete modal states
+  const [showDeleteSessionModal, setShowDeleteSessionModal] = useState(false);
+  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
+
+  // Preset action modal states
+  const [showPresetActionModal, setShowPresetActionModal] = useState(false);
+  const [pendingActionPreset, setPendingActionPreset] = useState<MemberPreset | null>(null);
+
   const handleAddMember = () => {
     const trimmed = newName.trim();
     if (!trimmed) return;
@@ -96,6 +104,26 @@ export function MainPage() {
     addPreset(trimmed, members.map((m) => m.name));
     setShowSavePresetModal(false);
     setPresetName('');
+  };
+
+  // Session delete handlers
+  const handleRemoveSession = (id: string) => {
+    setPendingDeleteSessionId(id);
+    setShowDeleteSessionModal(true);
+  };
+
+  const confirmDeleteSession = () => {
+    if (pendingDeleteSessionId) {
+      removeSession(pendingDeleteSessionId);
+      setPendingDeleteSessionId(null);
+    }
+    setShowDeleteSessionModal(false);
+  };
+
+  // Preset action modal handler
+  const handlePresetClick = (preset: MemberPreset) => {
+    setPendingActionPreset(preset);
+    setShowPresetActionModal(true);
   };
 
   const handleLoadPreset = (preset: MemberPreset) => {
@@ -248,12 +276,8 @@ export function MainPage() {
                   key={preset.id}
                   color="lavender"
                   selected
-                  onClick={() => handleLoadPreset(preset)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    handleDeletePreset(preset.id);
-                  }}
-                  aria-label={`${preset.name} 불러오기`}
+                  onClick={() => handlePresetClick(preset)}
+                  aria-label={`${preset.name} 선택`}
                 >
                   {preset.name} ({preset.memberNames.length}명)
                 </Chip>
@@ -299,7 +323,7 @@ export function MainPage() {
             key={session.id}
             session={session}
             index={i}
-            onRemove={removeSession}
+            onRemove={handleRemoveSession}
             onDuplicate={duplicateSession}
           />
         ))}
@@ -429,6 +453,65 @@ export function MainPage() {
             취소
           </Button>
           <Button variant="danger" fullWidth onClick={confirmDeletePreset}>
+            삭제
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Session Delete Confirmation Modal */}
+      <Modal
+        open={showDeleteSessionModal}
+        onClose={() => setShowDeleteSessionModal(false)}
+        title="세션 삭제"
+      >
+        <p className="mb-4 text-text-secondary">
+          해당 세션을 삭제하시겠습니까?
+        </p>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => setShowDeleteSessionModal(false)}
+          >
+            취소
+          </Button>
+          <Button variant="danger" fullWidth onClick={confirmDeleteSession}>
+            삭제
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Preset Action Modal */}
+      <Modal
+        open={showPresetActionModal}
+        onClose={() => setShowPresetActionModal(false)}
+        title={pendingActionPreset?.name ?? '그룹 선택'}
+      >
+        <p className="mb-4 text-text-secondary">
+          &lsquo;{pendingActionPreset?.name}&rsquo; 그룹으로 무엇을 하시겠습니까?
+        </p>
+        <div className="flex gap-2">
+          <Button
+            fullWidth
+            onClick={() => {
+              if (pendingActionPreset) {
+                setShowPresetActionModal(false);
+                handleLoadPreset(pendingActionPreset);
+              }
+            }}
+          >
+            불러오기
+          </Button>
+          <Button
+            variant="danger"
+            fullWidth
+            onClick={() => {
+              if (pendingActionPreset) {
+                setShowPresetActionModal(false);
+                handleDeletePreset(pendingActionPreset.id);
+              }
+            }}
+          >
             삭제
           </Button>
         </div>
