@@ -8,6 +8,7 @@ import { useAccountStore } from '@/entities/account';
 import { useHistoryStore } from '@/entities/history';
 import { useTransferCompletionStore, getTransferKey } from '@/entities/transfer-completion';
 import { useHydration } from '@/shared/lib/use-hydration';
+import { findMainPayer, formatAmount } from '@/shared/lib/formatters';
 import { settle, calculateBalance, optimizeTransfers } from '@/features/calculate';
 import { ShareButton } from '@/features/share';
 import { buildSettlementText, shareText } from '@/features/share/lib/text-share';
@@ -35,31 +36,43 @@ export function SettlementPage() {
     return { results, transfers };
   }, [sessions, members]);
 
-  // Find the main payer (person who paid the most)
-  const mainPayer = useMemo(() => {
-    const payerMap = new Map<string, number>();
-    for (const session of sessions) {
-      const prev = payerMap.get(session.payerId) || 0;
-      payerMap.set(session.payerId, prev + session.totalAmount);
-    }
-    let maxId = '';
-    let maxAmount = 0;
-    for (const [id, amount] of payerMap) {
-      if (amount > maxAmount) {
-        maxId = id;
-        maxAmount = amount;
-      }
-    }
-    return members.find((m) => m.id === maxId);
-  }, [sessions, members]);
+  const mainPayer = useMemo(() => findMainPayer(sessions, members), [sessions, members]);
 
   const totalAmount = sessions.reduce((sum, s) => sum + s.totalAmount, 0);
 
-  // Auto-save to history (once per mount)
+  // Build a fingerprint from session IDs + totalAmount to detect duplicate saves
+  const fingerprint = useMemo(() => {
+    if (sessions.length === 0) return '';
+    const sortedIds = sessions.map((s) => s.id).sort().join(',');
+    return `${sortedIds}:${totalAmount}`;
+  }, [sessions, totalAmount]);
+
+  // Auto-save to history (deduplicated across mounts)
   const savedRef = useRef(false);
   useEffect(() => {
     if (savedRef.current) return;
     if (results.length === 0) return;
+    if (!fingerprint) return;
+
+    // Secondary guard: sessionStorage check for cross-navigation duplicates
+    const STORAGE_KEY = 'lastSavedFingerprint';
+    if (typeof window !== 'undefined' && sessionStorage.getItem(STORAGE_KEY) === fingerprint) {
+      savedRef.current = true;
+      return;
+    }
+
+    // Primary guard: check if history store already has an entry with the same fingerprint
+    const existing = useHistoryStore.getState().histories.some((h) => {
+      const ids = h.sessions.map((s) => s.id).sort().join(',');
+      return `${ids}:${h.totalAmount}` === fingerprint;
+    });
+    if (existing) {
+      savedRef.current = true;
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(STORAGE_KEY, fingerprint);
+      }
+      return;
+    }
 
     const now = new Date();
     const year = now.getFullYear();
@@ -77,7 +90,11 @@ export function SettlementPage() {
       transfers: transfers.map((t) => ({ from: t.from, to: t.to, amount: t.amount })),
     });
     savedRef.current = true;
-  }, [results, transfers, members, sessions, totalAmount]);
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEY, fingerprint);
+    }
+  }, [results, transfers, members, sessions, totalAmount, fingerprint]);
 
   const handleTextShare = useCallback(async () => {
     setTextShareStatus(null);
@@ -86,7 +103,7 @@ export function SettlementPage() {
         transfers,
         members,
         account,
-        totalLabel: `${totalAmount.toLocaleString('ko-KR')}원`,
+        totalLabel: formatAmount(totalAmount),
         sessions,
         results,
       });
@@ -102,6 +119,17 @@ export function SettlementPage() {
     return (
       <div className="flex items-center justify-center py-16">
         <p className="text-sm text-text-muted">로딩 중...</p>
+      </div>
+    );
+  }
+
+  if (sessions.length === 0 || members.length < 2) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-4">
+        <p className="text-sm text-text-muted">정산할 데이터가 없습니다.</p>
+        <Link href="/">
+          <Button variant="secondary" size="sm">메인으로 이동</Button>
+        </Link>
       </div>
     );
   }
@@ -153,7 +181,7 @@ export function SettlementPage() {
                   key={i}
                   type="button"
                   onClick={() => toggleCompletion(key)}
-                  aria-label={`${fromMember?.name} → ${toMember?.name} ${t.amount.toLocaleString('ko-KR')}원 송금 완료 토글`}
+                  aria-label={`${fromMember?.name} → ${toMember?.name} ${formatAmount(t.amount)} 송금 완료 토글`}
                   className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
                     completed
                       ? 'bg-pastel-mint/30'
@@ -177,7 +205,7 @@ export function SettlementPage() {
                       completed ? 'line-through opacity-60' : ''
                     }`}
                   >
-                    {t.amount.toLocaleString('ko-KR')}원
+                    {formatAmount(t.amount)}
                   </span>
                 </button>
               );
@@ -199,7 +227,7 @@ export function SettlementPage() {
           transfers={transfers}
           members={members}
           account={account}
-          totalLabel={`${totalAmount.toLocaleString('ko-KR')}원`}
+          totalLabel={formatAmount(totalAmount)}
         />
         <Button
           variant="secondary"
