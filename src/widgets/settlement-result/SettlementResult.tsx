@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardTitle, Button } from '@/shared/ui';
+import { Card, Button } from '@/shared/ui';
+import { formatAmount } from '@/shared/lib/formatters';
 import { useAccountStore } from '@/entities/account';
 import type { SettlementResult as SettlementResultType } from '@/shared/types';
 
@@ -27,25 +28,9 @@ export function SettlementResult({ results, payerName }: SettlementResultProps) 
   };
 
   const positiveResults = results.filter((r) => r.totalAmount > 0);
-  const negativeResults = results.filter((r) => r.totalAmount < 0);
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 받을 사람 (Payer) */}
-      {negativeResults.length > 0 && (
-        <Card className="bg-pastel-mint/30">
-          <CardTitle className="mb-3">
-            {payerName}님이 받을 금액
-          </CardTitle>
-          <p className="text-2xl font-bold text-text-primary">
-            {Math.abs(
-              negativeResults.reduce((sum, r) => sum + r.totalAmount, 0),
-            ).toLocaleString('ko-KR')}
-            원
-          </p>
-        </Card>
-      )}
-
       {/* 보낼 사람들 */}
       {positiveResults.length > 0 && (
         <div className="flex flex-col gap-3">
@@ -59,7 +44,7 @@ export function SettlementResult({ results, payerName }: SettlementResultProps) 
                   {result.memberName}
                 </span>
                 <span className="text-lg font-bold text-primary-dark">
-                  {result.totalAmount.toLocaleString('ko-KR')}원
+                  {formatAmount(result.totalAmount)}
                 </span>
               </div>
 
@@ -102,7 +87,7 @@ export function SettlementResult({ results, payerName }: SettlementResultProps) 
         </div>
       )}
 
-      {positiveResults.length === 0 && negativeResults.length === 0 && (
+      {positiveResults.length === 0 && (
         <Card className="text-center py-8">
           <p className="text-text-muted">정산할 내역이 없습니다</p>
         </Card>

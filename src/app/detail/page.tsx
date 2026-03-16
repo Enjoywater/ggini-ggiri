@@ -6,6 +6,7 @@ import { decompressData } from '@/shared/lib/serializer';
 import { getShare } from '@/shared/lib/share-store';
 import type { ShareableData } from '@/shared/lib/serializer';
 import { Card, CardTitle, Button } from '@/shared/ui';
+import { formatAmount } from '@/shared/lib/formatters';
 import { Suspense } from 'react';
 import Link from 'next/link';
 
@@ -116,7 +117,7 @@ function DetailContent() {
                 <strong>{memberMap.get(t.to) ?? '?'}</strong>
               </span>
               <span className="text-lg font-bold text-primary-dark">
-                {t.amount.toLocaleString('ko-KR')}원
+                {formatAmount(t.amount)}
               </span>
             </div>
           ))}
@@ -130,7 +131,7 @@ function DetailContent() {
             <div className="flex items-center justify-between">
               <CardTitle>{session.title}</CardTitle>
               <span className="text-base font-medium text-text-primary">
-                {session.totalAmount.toLocaleString('ko-KR')}원
+                {formatAmount(session.totalAmount)}
               </span>
             </div>
             <p className="mt-1 text-sm text-text-secondary">
@@ -167,7 +168,7 @@ function DetailContent() {
                 }`}
               >
                 {item.totalAmount > 0 ? '+' : ''}
-                {item.totalAmount.toLocaleString('ko-KR')}원
+                {formatAmount(item.totalAmount)}
               </span>
             </div>
             {item.details.length > 0 && (

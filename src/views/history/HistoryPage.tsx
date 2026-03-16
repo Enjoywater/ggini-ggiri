@@ -7,18 +7,7 @@ import { useHydration } from '@/shared/lib/use-hydration';
 import { SettlementResult } from '@/widgets/settlement-result';
 import type { SettlementHistory } from '@/shared/types';
 import Link from 'next/link';
-
-function formatDate(timestamp: number): string {
-  const d = new Date(timestamp);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}.${month}.${day}`;
-}
-
-function formatAmount(amount: number): string {
-  return amount.toLocaleString('ko-KR') + '원';
-}
+import { formatDate, formatAmount, findMainPayer } from '@/shared/lib/formatters';
 
 function MemberNamesText({ names }: { names: string[] }) {
   if (names.length <= 3) {
@@ -32,22 +21,7 @@ function MemberNamesText({ names }: { names: string[] }) {
 }
 
 function HistoryDetail({ history }: { history: SettlementHistory }) {
-  const mainPayer = (() => {
-    const payerMap = new Map<string, number>();
-    for (const session of history.sessions) {
-      const prev = payerMap.get(session.payerId) || 0;
-      payerMap.set(session.payerId, prev + session.totalAmount);
-    }
-    let maxId = '';
-    let maxAmount = 0;
-    for (const [id, amount] of payerMap) {
-      if (amount > maxAmount) {
-        maxId = id;
-        maxAmount = amount;
-      }
-    }
-    return history.members.find((m) => m.id === maxId);
-  })();
+  const mainPayer = findMainPayer(history.sessions, history.members);
 
   return (
     <div className="flex flex-col gap-3 mt-3 pt-3 border-t border-border">
