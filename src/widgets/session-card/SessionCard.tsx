@@ -260,6 +260,15 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
                   ))}
               </div>
             </div>
+
+            {(() => {
+              const alcoholTotal = session.alcohol!.unitPrice * session.alcohol!.quantity;
+              return alcoholTotal > 0 && session.totalAmount > 0 && alcoholTotal > session.totalAmount ? (
+                <p className="text-xs text-warning-dark">
+                  주류 합계({alcoholTotal.toLocaleString('ko-KR')}원)가 총 금액({session.totalAmount.toLocaleString('ko-KR')}원)을 초과합니다.
+                </p>
+              ) : null;
+            })()}
           </div>
         )}
       </div>

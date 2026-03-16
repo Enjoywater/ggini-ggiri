@@ -6,6 +6,10 @@ import { useAccountStore } from '@/entities/account';
 import { useThemeStore, type ThemeMode } from '@/entities/theme';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
+import { useHistoryStore } from '@/entities/history';
+import { usePresetStore } from '@/entities/preset';
+import { useTransferCompletionStore } from '@/entities/transfer-completion';
+import { validateAccountNumber, validateBankName, validateOwnerName } from '@/shared/lib/validators';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { ExportImportButtons } from '@/features/export-import';
 import Link from 'next/link';
@@ -16,12 +20,19 @@ export function SettingsPage() {
   const members = useMemberStore((s) => s.members);
   const resetMembers = useMemberStore((s) => s.reset);
   const resetSessions = useSessionStore((s) => s.reset);
+  const clearHistory = useHistoryStore((s) => s.clearAll);
+  const resetPresets = usePresetStore((s) => s.reset);
+  const resetTransferCompletion = useTransferCompletionStore((s) => s.reset);
 
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const [bankNameError, setBankNameError] = useState<string | null>(null);
+  const [accountNumberError, setAccountNumberError] = useState<string | null>(null);
+  const [ownerNameError, setOwnerNameError] = useState<string | null>(null);
 
   // hydration 후 저장된 계좌 정보로 초기값 복원
   useEffect(() => {
@@ -34,8 +45,35 @@ export function SettingsPage() {
     }
   }, [hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleBankNameBlur = () => {
+    if (!bankName.trim()) { setBankNameError(null); return; }
+    const result = validateBankName(bankName);
+    setBankNameError(result.valid ? null : result.error ?? null);
+  };
+
+  const handleAccountNumberBlur = () => {
+    if (!accountNumber.trim()) { setAccountNumberError(null); return; }
+    const result = validateAccountNumber(accountNumber);
+    setAccountNumberError(result.valid ? null : result.error ?? null);
+  };
+
+  const handleOwnerNameBlur = () => {
+    if (!ownerName.trim()) { setOwnerNameError(null); return; }
+    const result = validateOwnerName(ownerName);
+    setOwnerNameError(result.valid ? null : result.error ?? null);
+  };
+
   const handleSave = () => {
-    if (!bankName.trim() || !accountNumber.trim() || !ownerName.trim()) return;
+    const bankResult = validateBankName(bankName);
+    const accountResult = validateAccountNumber(accountNumber);
+    const ownerResult = validateOwnerName(ownerName);
+
+    setBankNameError(bankResult.valid ? null : bankResult.error ?? null);
+    setAccountNumberError(accountResult.valid ? null : accountResult.error ?? null);
+    setOwnerNameError(ownerResult.valid ? null : ownerResult.error ?? null);
+
+    if (!bankResult.valid || !accountResult.valid || !ownerResult.valid) return;
+
     setAccount({
       bankName: bankName.trim(),
       accountNumber: accountNumber.trim(),
@@ -49,6 +87,9 @@ export function SettingsPage() {
     resetMembers();
     resetSessions();
     clearAccount();
+    clearHistory();
+    resetPresets();
+    resetTransferCompletion();
     setShowResetModal(false);
     setBankName('');
     setAccountNumber('');
@@ -88,25 +129,37 @@ export function SettingsPage() {
         </p>
 
         <div className="flex flex-col gap-3">
-          <Input
-            label="은행명"
-            placeholder="예: 카카오뱅크"
-            value={bankName}
-            onChange={(e) => setBankName(e.target.value)}
-          />
-          <Input
-            label="계좌번호"
-            placeholder="계좌번호 입력"
-            inputMode="numeric"
-            value={accountNumber}
-            onChange={(e) => setAccountNumber(e.target.value)}
-          />
-          <Input
-            label="예금주"
-            placeholder="예금주명"
-            value={ownerName}
-            onChange={(e) => setOwnerName(e.target.value)}
-          />
+          <div>
+            <Input
+              label="은행명"
+              placeholder="예: 카카오뱅크"
+              value={bankName}
+              onChange={(e) => { setBankName(e.target.value); setBankNameError(null); }}
+              onBlur={handleBankNameBlur}
+            />
+            {bankNameError && <p className="text-xs text-danger-dark mt-1">{bankNameError}</p>}
+          </div>
+          <div>
+            <Input
+              label="계좌번호"
+              placeholder="계좌번호 입력"
+              inputMode="numeric"
+              value={accountNumber}
+              onChange={(e) => { setAccountNumber(e.target.value); setAccountNumberError(null); }}
+              onBlur={handleAccountNumberBlur}
+            />
+            {accountNumberError && <p className="text-xs text-danger-dark mt-1">{accountNumberError}</p>}
+          </div>
+          <div>
+            <Input
+              label="예금주"
+              placeholder="예금주명"
+              value={ownerName}
+              onChange={(e) => { setOwnerName(e.target.value); setOwnerNameError(null); }}
+              onBlur={handleOwnerNameBlur}
+            />
+            {ownerNameError && <p className="text-xs text-danger-dark mt-1">{ownerNameError}</p>}
+          </div>
           <Button fullWidth onClick={handleSave}>
             {saved ? '저장 완료!' : '계좌 저장'}
           </Button>
@@ -144,7 +197,7 @@ export function SettingsPage() {
         title="데이터 초기화"
       >
         <p className="mb-4 text-text-secondary">
-          모든 데이터가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+          모든 데이터가 삭제됩니다. 정산 기록, 저장된 그룹도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
         </p>
         <div className="flex gap-2">
           <Button

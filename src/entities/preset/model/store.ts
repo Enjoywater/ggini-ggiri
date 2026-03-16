@@ -9,6 +9,7 @@ interface PresetState {
   removePreset: (id: string) => void;
   updatePreset: (id: string, params: Partial<Omit<MemberPreset, 'id'>>) => void;
   getPreset: (id: string) => MemberPreset | undefined;
+  reset: () => void;
 }
 
 export const usePresetStore = create<PresetState>()(
@@ -38,6 +39,10 @@ export const usePresetStore = create<PresetState>()(
 
       getPreset: (id) => {
         return get().presets.find((p) => p.id === id);
+      },
+
+      reset: () => {
+        set({ presets: [] });
       },
     }),
     { name: 'ggini-preset-storage' },
