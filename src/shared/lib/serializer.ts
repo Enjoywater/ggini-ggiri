@@ -36,7 +36,7 @@ export function decompressData(encoded: string): ShareableData {
 }
 
 /** 복원된 데이터의 구조 및 타입 검증 (XSS/조작 방지) */
-function validateShareableData(data: unknown): ShareableData {
+export function validateShareableData(data: unknown): ShareableData {
   if (!data || typeof data !== 'object') {
     throw new Error('잘못된 데이터 형식입니다.');
   }

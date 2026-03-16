@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import { supabase } from './supabase';
+import { validateShareableData } from './serializer';
 import type { ShareableData } from './serializer';
 
 /** 정산 데이터를 Supabase에 저장하고 짧은 ID 반환 */
@@ -26,5 +27,10 @@ export async function getShare(id: string): Promise<ShareableData | null> {
     .single();
 
   if (error || !data) return null;
-  return data.data as ShareableData;
+
+  try {
+    return validateShareableData(data.data);
+  } catch {
+    return null;
+  }
 }
