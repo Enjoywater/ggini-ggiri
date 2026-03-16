@@ -25,17 +25,9 @@ describe('Accessibility', () => {
       expect(screen.getByRole('button')).toHaveAttribute('type', 'submit');
     });
 
-    it('has aria-disabled when disabled', () => {
+    it('has disabled attribute when disabled', () => {
       render(<Button disabled>Disabled</Button>);
-      expect(screen.getByRole('button')).toHaveAttribute(
-        'aria-disabled',
-        'true',
-      );
-    });
-
-    it('does not have aria-disabled when enabled', () => {
-      render(<Button>Enabled</Button>);
-      expect(screen.getByRole('button')).not.toHaveAttribute('aria-disabled');
+      expect(screen.getByRole('button')).toBeDisabled();
     });
   });
 

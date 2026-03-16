@@ -23,7 +23,7 @@ export function SettlementResult({ results, payerName }: SettlementResultProps) 
       setCopiedId(memberId);
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
-      // Fallback for environments without clipboard API
+      alert('복사에 실패했습니다. 직접 계좌 정보를 확인해주세요.');
     }
   };
 

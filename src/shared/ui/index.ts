@@ -6,3 +6,4 @@ export { Switch } from './Switch';
 export { Modal } from './Modal';
 export { ErrorBoundary } from './ErrorBoundary';
 export { FormField } from './FormField';
+export { ServiceWorkerRegistrar } from './ServiceWorkerRegistrar';

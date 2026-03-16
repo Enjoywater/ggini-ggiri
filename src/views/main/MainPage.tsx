@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Input, Card, Chip, Modal } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
@@ -8,10 +8,9 @@ import { useAccountStore } from '@/entities/account';
 import { usePresetStore } from '@/entities/preset';
 import type { MemberPreset } from '@/shared/types';
 import { useHydration } from '@/shared/lib/use-hydration';
+import { PASTEL_COLORS } from '@/shared/lib';
 import { SessionCard } from '@/widgets/session-card';
 import Link from 'next/link';
-
-const PASTEL_COLORS = ['pink', 'lavender', 'mint', 'sky', 'peach'] as const;
 
 export function MainPage() {
   const hydrated = useHydration();
@@ -20,15 +19,18 @@ export function MainPage() {
   const account = useAccountStore((s) => s.account);
 
   // 계좌 예금주가 참여자에 없으면 자동 추가
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (!hydrated || !account?.ownerName) return;
+    if (!hydrated || initializedRef.current) return;
+    initializedRef.current = true;
+    if (!account?.ownerName) return;
     const ownerExists = useMemberStore.getState().members.some(
       (m) => m.name === account.ownerName,
     );
     if (!ownerExists) {
       addMember(account.ownerName);
     }
-  }, [hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hydrated, account, addMember]);
 
   const { presets, addPreset, removePreset } = usePresetStore();
 

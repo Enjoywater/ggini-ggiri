@@ -9,7 +9,7 @@ interface TransferCompletionState {
 }
 
 export function getTransferKey(from: string, to: string, amount: number): string {
-  return `${from}-${to}-${amount}`;
+  return `${from}|${to}|${amount}`;
 }
 
 export const useTransferCompletionStore = create<TransferCompletionState>()(

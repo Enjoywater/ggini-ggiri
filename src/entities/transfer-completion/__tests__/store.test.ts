@@ -8,7 +8,7 @@ beforeEach(() => {
 describe('getTransferKey', () => {
   it('generates consistent key from from, to, amount', () => {
     const key = getTransferKey('a1', 'b1', 50000);
-    expect(key).toBe('a1-b1-50000');
+    expect(key).toBe('a1|b1|50000');
   });
 
   it('produces different keys for different inputs', () => {

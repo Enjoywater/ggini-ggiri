@@ -42,7 +42,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {suffix && (
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-muted pointer-events-none">
+            <span aria-hidden="true" className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-muted pointer-events-none">
               {suffix}
             </span>
           )}

@@ -39,21 +39,19 @@ function DetailContent() {
     let cancelled = false;
 
     (async () => {
-      try {
-        const data = await getShare(shareId);
-        if (cancelled) return;
-        if (data) {
-          setRemoteResult({ ok: true, data });
-        } else {
-          setRemoteResult({ ok: false, error: '정산 데이터를 찾을 수 없습니다.' });
-        }
-      } catch {
-        if (!cancelled) {
-          setRemoteResult({ ok: false, error: '데이터를 불러오는데 실패했습니다.' });
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+      const result = await getShare(shareId);
+      if (cancelled) return;
+      if (result.ok) {
+        setRemoteResult({ ok: true, data: result.data });
+      } else {
+        const messages: Record<string, string> = {
+          not_found: '정산 데이터를 찾을 수 없습니다.',
+          network: '네트워크 오류로 데이터를 불러올 수 없습니다.',
+          corrupted: '정산 데이터가 손상되었습니다.',
+        };
+        setRemoteResult({ ok: false, error: messages[result.reason] });
       }
+      setLoading(false);
     })();
 
     return () => { cancelled = true; };
@@ -106,9 +104,9 @@ function DetailContent() {
       {transfers && transfers.length > 0 && (
         <div className="flex flex-col gap-3">
           <h2 className="text-base font-semibold text-text-secondary">송금 요약</h2>
-          {transfers.map((t, i) => (
+          {transfers.map((t) => (
             <div
-              key={i}
+              key={`${t.from}-${t.to}-${t.amount}`}
               className="flex items-center justify-between rounded-xl bg-pastel-sky/30 px-4 py-3"
             >
               <span className="text-base text-text-primary">

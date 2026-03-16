@@ -36,8 +36,3 @@ export function loadKakaoSDK(): Promise<void> {
 
   return loadPromise;
 }
-
-/** SDK가 초기화되었는지 확인 */
-export function isKakaoSDKReady(): boolean {
-  return typeof window !== 'undefined' && !!window.Kakao?.isInitialized();
-}

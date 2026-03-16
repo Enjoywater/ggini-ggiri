@@ -68,6 +68,7 @@ export const useSessionStore = create<SessionState>()(
 
         set((state) => {
           const idx = state.sessions.findIndex((s) => s.id === id);
+          if (idx === -1) return state;
           const next = [...state.sessions];
           next.splice(idx + 1, 0, newSession);
           return { sessions: next };
@@ -101,19 +102,21 @@ export const useSessionStore = create<SessionState>()(
 
       removeMemberFromSessions: (memberId) => {
         set((state) => ({
-          sessions: state.sessions.map((s) => {
-            const participantIds = s.participantIds.filter((id) => id !== memberId);
-            const alcohol = s.alcohol
-              ? {
-                  ...s.alcohol,
-                  drinkerIds: s.alcohol.drinkerIds.filter((id) => id !== memberId),
-                }
-              : undefined;
-            const payerId = s.payerId === memberId
-              ? (participantIds[0] ?? s.payerId)
-              : s.payerId;
-            return { ...s, participantIds, alcohol, payerId };
-          }),
+          sessions: state.sessions
+            .map((s) => {
+              const participantIds = s.participantIds.filter((id) => id !== memberId);
+              const alcohol = s.alcohol
+                ? {
+                    ...s.alcohol,
+                    drinkerIds: s.alcohol.drinkerIds.filter((id) => id !== memberId),
+                  }
+                : undefined;
+              const payerId = s.payerId === memberId
+                ? (participantIds[0] ?? '')
+                : s.payerId;
+              return { ...s, participantIds, alcohol, payerId };
+            })
+            .filter((s) => s.participantIds.length > 0),
         }));
       },
 

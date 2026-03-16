@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, Input, Chip, Switch, Button, FormField } f
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { validateSessionAmount, validateAlcoholUnitPrice, validateAlcoholQuantity } from '@/shared/lib/validators';
+import { PASTEL_COLORS } from '@/shared/lib';
 import type { Session } from '@/shared/types';
 
 interface SessionCardProps {
@@ -13,8 +14,6 @@ interface SessionCardProps {
   onRemove: (id: string) => void;
   onDuplicate?: (id: string) => void;
 }
-
-const PASTEL_COLORS = ['pink', 'lavender', 'mint', 'sky', 'peach'] as const;
 
 export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCardProps) {
   const members = useMemberStore((s) => s.members);

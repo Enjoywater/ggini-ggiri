@@ -29,12 +29,12 @@ function HistoryDetail({ history }: { history: SettlementHistory }) {
       {history.transfers.length > 0 && (
         <div className="flex flex-col gap-2">
           <h4 className="text-sm font-semibold text-text-secondary">송금 요약</h4>
-          {history.transfers.map((t, i) => {
+          {history.transfers.map((t) => {
             const fromMember = history.members.find((m) => m.id === t.from);
             const toMember = history.members.find((m) => m.id === t.to);
             return (
               <div
-                key={i}
+                key={`${t.from}-${t.to}-${t.amount}`}
                 className="flex items-center justify-between rounded-xl bg-pastel-sky/30 px-3 py-2 text-sm"
               >
                 <span className="text-text-primary">
@@ -117,6 +117,13 @@ export function HistoryPage() {
               key={history.id}
               className="cursor-pointer transition-colors hover:bg-surface"
               onClick={() => handleToggleExpand(history.id)}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleToggleExpand(history.id);
+                }
+              }}
+              tabIndex={0}
               role="button"
               aria-expanded={expandedId === history.id}
               aria-label={`${history.title} 정산 기록`}

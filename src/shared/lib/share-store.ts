@@ -18,19 +18,24 @@ export async function saveShare(data: ShareableData): Promise<string> {
   return id;
 }
 
+export type ShareResult =
+  | { ok: true; data: ShareableData }
+  | { ok: false; reason: 'not_found' | 'network' | 'corrupted' };
+
 /** ID로 정산 데이터 조회 */
-export async function getShare(id: string): Promise<ShareableData | null> {
+export async function getShare(id: string): Promise<ShareResult> {
   const { data, error } = await supabase
     .from('shared_settlements')
     .select('data')
     .eq('id', id)
     .single();
 
-  if (error || !data) return null;
+  if (error) return { ok: false, reason: 'network' };
+  if (!data) return { ok: false, reason: 'not_found' };
 
   try {
-    return validateShareableData(data.data);
+    return { ok: true, data: validateShareableData(data.data) };
   } catch {
-    return null;
+    return { ok: false, reason: 'corrupted' };
   }
 }

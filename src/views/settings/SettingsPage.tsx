@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Input, Card, CardTitle, Modal, Chip } from '@/shared/ui';
 import { useAccountStore } from '@/entities/account';
 import { useThemeStore, type ThemeMode } from '@/entities/theme';
@@ -34,16 +34,19 @@ export function SettingsPage() {
   const [accountNumberError, setAccountNumberError] = useState<string | null>(null);
   const [ownerNameError, setOwnerNameError] = useState<string | null>(null);
 
-  // hydration 후 저장된 계좌 정보로 초기값 복원
+  // hydration 후 저장된 계좌 정보로 초기값 복원 (persist → local state 동기화, 1회만 실행)
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || initializedRef.current) return;
+    initializedRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- persist 스토어 → local state 초기 동기화 (1회성)
     setBankName(account?.bankName ?? '');
     setAccountNumber(account?.accountNumber ?? '');
     // 계좌가 이미 설정된 경우에만 예금주를 멤버 이름으로 기본값 설정
     if (account?.accountNumber) {
       setOwnerName(account.ownerName || members[0]?.name || '');
     }
-  }, [hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hydrated, account, members]);
 
   const handleBankNameBlur = () => {
     if (!bankName.trim()) { setBankNameError(null); return; }

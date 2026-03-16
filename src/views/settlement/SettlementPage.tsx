@@ -171,14 +171,14 @@ export function SettlementPage() {
                 )}
               </div>
             </div>
-            {transfers.map((t, i) => {
+            {transfers.map((t) => {
               const key = getTransferKey(t.from, t.to, t.amount);
               const completed = !!completions[key];
               const fromMember = members.find((m) => m.id === t.from);
               const toMember = members.find((m) => m.id === t.to);
               return (
                 <button
-                  key={i}
+                  key={`${t.from}-${t.to}-${t.amount}`}
                   type="button"
                   onClick={() => toggleCompletion(key)}
                   aria-label={`${fromMember?.name} → ${toMember?.name} ${formatAmount(t.amount)} 송금 완료 토글`}
