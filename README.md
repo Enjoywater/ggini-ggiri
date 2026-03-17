@@ -6,11 +6,15 @@ Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나
 ## 1) 사용자 관점: 이 앱으로 할 수 있는 것
 
 - 참여자 추가/삭제 및 그룹(프리셋) 저장/불러오기
+- 참여자 이름 더블탭으로 인라인 수정
 - N차별로 결제자, 참여자, 금액 입력
+- 참여자/음주자 전체 선택/해제 토글
+- 세션 합계 실시간 표시
 - 술값 별도 정산(주류 단가/수량/음주자 지정)
 - 자동 정산 결과 확인(개인별 부담 + 송금 요약)
 - 송금 완료 체크 (송금 건별 완료 표시, 완료 카운트, 초기화)
 - 계좌 정보 저장 후 원클릭 복사
+- 계좌 미설정 시 설정 페이지 유도 CTA 배너
 - 입력 유효성 검증 (금액, 주류 단가/수량 인라인 피드백)
 - 정산 결과 공유
   - 카카오톡 공유 (Kakao JS SDK Feed 템플릿 — 송금 요약 + 계좌 정보 + 상세 링크)
@@ -72,6 +76,14 @@ npm run test:watch
 npm run lint
 ```
 
+### pre-push hook
+
+`git push` 실행 시 자동으로 ESLint → TypeScript 타입 체크 → 전체 테스트를 순서대로 실행합니다.
+하나라도 실패하면 push가 차단되어 테스트 실패 코드가 배포되는 것을 방지합니다.
+
+- hook 파일: `.git/hooks/pre-push`
+- CI: `.github/workflows/ci.yml` (GitHub Actions — push/PR 시 lint → type-check → test → build)
+
 ## 4) 빌드 및 배포
 
 ### 웹 빌드
@@ -90,7 +102,7 @@ Vercel에 배포 중이며, 환경변수 설정이 필요합니다:
 빌드 결과물(`out/`)을 정적 호스팅에 배포하면 PWA로 동작합니다.
 
 - `manifest.json` — 앱 이름, 테마 컬러, standalone 모드 설정
-- `sw.js` — Service Worker (정적 에셋 캐시, 오프라인 지원)
+- `sw.js` — Service Worker (정적 에셋 캐시, 오프라인 지원, 외부 API 캐시 제외)
 
 사용자는 모바일 브라우저에서 **"홈 화면에 추가"** 를 통해 네이티브 앱처럼 사용할 수 있습니다.
 
@@ -134,6 +146,8 @@ src/
 - Zustand persist로 로컬 기기에 데이터 저장
   - 참여자, 세션, 계좌, 프리셋, 히스토리, 송금 완료 상태
 - 공유 데이터는 Supabase에 저장, 짧은 ID로 접근 (`/detail?id=xxx`)
+- 환경변수 미설정 시 Supabase/Kakao 기능이 안전하게 비활성화 (런타임 크래시 방지)
+- Service Worker에서 Supabase/Kakao 등 외부 API 응답은 캐싱하지 않음
 - 공유 URL에는 계좌 정보 미포함
 - 카카오톡 카드의 description에 계좌 정보 표시 (URL에는 미포함)
 - 공유 링크 복원 시 구조/타입 검증 수행
@@ -142,7 +156,7 @@ src/
 
 ## 8) 테스트 범위
 
-현재 다음 영역에 대한 단위 테스트가 포함되어 있습니다. (총 385개 테스트, 27개 파일)
+현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 502개 테스트, 32개 파일)
 
 - 정산 엔진 (`settlement-engine`, edge cases, settle/calculateBalance 정합성)
 - 공유/직렬화 (`text-share` 세션별 내역 포함, `serializer`)
@@ -154,7 +168,13 @@ src/
 - 접근성 (`accessibility` — ARIA 속성, 포커스 트랩, 키보드 네비게이션)
 - 유효성 검증 (`validators` — 계좌번호, 금액, 멤버명, 주류 수량/단가)
 - 에러 처리 (`error-handler` — AppError 타입, 사용자 취소 감지, 한국어 메시지)
-- 뷰 레이어 (`HistoryPage` — 목록 렌더링, expand/collapse, 삭제 플로우, 포맷터)
+- 뷰 레이어 통합 테스트
+  - `MainPage` — 참여자 CRUD, 프리셋 관리, 세션 관리, 합계/정산 버튼, 계좌 예금주 자동 추가
+  - `SettlementPage` — 송금 요약/완료 토글, 계좌 안내 CTA, 히스토리 자동 저장, 술값 정산
+  - `SettingsPage` — 테마 전환, 계좌 CRUD/유효성 검증, 전체 초기화, 백업/복원
+  - `HistoryPage` — 목록 렌더링, expand/collapse, 삭제 플로우, 포맷터
+- 위젯 테스트 (`SessionCard` — 렌더링, 결제자/참여자 토글, 전체 선택/해제, 술값 스위치, 음주자 관리)
+- E2E 유저 저니 (`e2e-journey` — 2인 정산, 5인 MT 술값 분리, 프리셋→정산→히스토리, 멤버 삭제 연쇄, 전체 초기화, 직장인 회식, 세션 복제, 엣지 케이스)
 - 송금 완료 스토어 (`transfer-completion` — toggle, reset, persist, 키 생성)
 
 ## 9) 개발 메모
