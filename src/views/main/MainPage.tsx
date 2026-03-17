@@ -9,12 +9,13 @@ import { usePresetStore } from '@/entities/preset';
 import type { MemberPreset } from '@/shared/types';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { PASTEL_COLORS } from '@/shared/lib';
+import { formatAmount } from '@/shared/lib/formatters';
 import { SessionCard } from '@/widgets/session-card';
 import Link from 'next/link';
 
 export function MainPage() {
   const hydrated = useHydration();
-  const { members, addMember, removeMember } = useMemberStore();
+  const { members, addMember, removeMember, updateMember } = useMemberStore();
   const { sessions, addSession, removeSession, duplicateSession, removeMemberFromSessions } = useSessionStore();
   const account = useAccountStore((s) => s.account);
 
@@ -55,6 +56,10 @@ export function MainPage() {
   const [showPresetActionModal, setShowPresetActionModal] = useState(false);
   const [pendingActionPreset, setPendingActionPreset] = useState<MemberPreset | null>(null);
 
+  // Member edit states
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
   const handleAddMember = () => {
     const trimmed = newName.trim();
     if (!trimmed) return;
@@ -83,6 +88,40 @@ export function MainPage() {
   const handleRemoveMember = (id: string) => {
     setPendingDeleteId(id);
     setShowDeleteModal(true);
+  };
+
+  const handleStartEdit = (id: string, currentName: string) => {
+    setEditingMemberId(id);
+    setEditingName(currentName);
+  };
+
+  const handleConfirmEdit = () => {
+    if (!editingMemberId) return;
+    const trimmed = editingName.trim();
+    if (!trimmed) {
+      setEditingMemberId(null);
+      return;
+    }
+    const duplicate = members.some((m) => m.id !== editingMemberId && m.name === trimmed);
+    if (duplicate) {
+      setNameError('이미 같은 이름의 참여자가 있습니다.');
+      setEditingMemberId(null);
+      return;
+    }
+    updateMember(editingMemberId, trimmed);
+    setEditingMemberId(null);
+    setNameError(null);
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleConfirmEdit();
+    }
+    if (e.key === 'Escape') {
+      setEditingMemberId(null);
+    }
   };
 
   const confirmDelete = () => {
@@ -231,18 +270,41 @@ export function MainPage() {
 
         {members.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {members.map((member, i) => (
-              <Chip
-                key={member.id}
-                selected
-                color={PASTEL_COLORS[i % PASTEL_COLORS.length]}
-                onClick={() => handleRemoveMember(member.id)}
-                aria-label={`${member.name} 삭제`}
-              >
-                {member.name} &times;
-              </Chip>
-            ))}
+            {members.map((member, i) =>
+              editingMemberId === member.id ? (
+                <input
+                  key={member.id}
+                  type="text"
+                  className="rounded-full border border-primary px-3 py-1.5 text-sm font-medium outline-none bg-surface-elevated text-text-primary w-24"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onBlur={handleConfirmEdit}
+                  onKeyDown={handleEditKeyDown}
+                  autoFocus
+                  aria-label="참여자 이름 수정"
+                />
+              ) : (
+                <Chip
+                  key={member.id}
+                  selected
+                  color={PASTEL_COLORS[i % PASTEL_COLORS.length]}
+                  onClick={() => handleRemoveMember(member.id)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    handleStartEdit(member.id, member.name);
+                  }}
+                  aria-label={`${member.name} (클릭: 삭제, 더블클릭: 수정)`}
+                >
+                  {member.name} &times;
+                </Chip>
+              ),
+            )}
           </div>
+        )}
+        {members.length > 0 && (
+          <p className="text-xs text-text-muted mt-1">
+            탭하여 삭제 · 더블탭하여 이름 수정
+          </p>
         )}
 
         {members.length === 0 && (
@@ -334,6 +396,13 @@ export function MainPage() {
       {/* Calculate Button */}
       {sessions.length > 0 && (
         <div className="flex flex-col gap-2">
+          {/* 세션 합계 */}
+          <div className="flex items-center justify-between rounded-xl bg-surface-elevated px-4 py-3">
+            <span className="text-sm font-medium text-text-secondary">전체 합계</span>
+            <span className="text-lg font-bold text-text-primary">
+              {formatAmount(sessions.reduce((sum, s) => sum + s.totalAmount, 0))}
+            </span>
+          </div>
           {hasZeroAmountSession && (
             <p className="text-xs text-warning-dark text-center">
               금액이 0원인 세션이 있습니다. 정산 결과에 반영되지 않을 수 있습니다.

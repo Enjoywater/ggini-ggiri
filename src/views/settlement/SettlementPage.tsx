@@ -220,6 +220,19 @@ export function SettlementPage() {
         payerName={mainPayer?.name ?? '결제자'}
       />
 
+      {/* Account Notice */}
+      {!account && (
+        <Link href="/settings" className="block">
+          <div className="flex items-center justify-between rounded-xl bg-pastel-peach/30 px-4 py-3 transition-colors hover:bg-pastel-peach/50">
+            <div>
+              <p className="text-sm font-medium text-text-primary">계좌 정보를 설정해 보세요</p>
+              <p className="text-xs text-text-muted">설정하면 공유 시 입금 정보가 자동 포함됩니다</p>
+            </div>
+            <span className="text-text-muted">&rarr;</span>
+          </div>
+        </Link>
+      )}
+
       {/* Share */}
       <div className="flex flex-col gap-2">
         <ShareButton

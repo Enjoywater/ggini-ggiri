@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { compressToEncodedURIComponent } from 'lz-string';
 import {
   compressData,
   decompressData,
@@ -177,13 +178,13 @@ describe('serializer: 조작된 데이터 방어', () => {
 
   it('유효하지 않은 JSON → 에러', () => {
     // lz-string으로 압축된 유효하지 않은 JSON
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent('not valid json {{{');
     expect(() => decompressData(compressed)).toThrow();
   });
 
   it('필수 필드(members) 누락 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent(
       JSON.stringify({ sessions: [], settlement: [] }),
     );
@@ -191,7 +192,7 @@ describe('serializer: 조작된 데이터 방어', () => {
   });
 
   it('필수 필드(sessions) 누락 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent(
       JSON.stringify({ members: [], settlement: [] }),
     );
@@ -199,7 +200,7 @@ describe('serializer: 조작된 데이터 방어', () => {
   });
 
   it('필수 필드(settlement) 누락 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent(
       JSON.stringify({ members: [], sessions: [] }),
     );
@@ -207,7 +208,7 @@ describe('serializer: 조작된 데이터 방어', () => {
   });
 
   it('members가 배열이 아닌 경우 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent(
       JSON.stringify({ members: 'not array', sessions: [], settlement: [] }),
     );
@@ -215,7 +216,7 @@ describe('serializer: 조작된 데이터 방어', () => {
   });
 
   it('멤버 데이터에 id 누락 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent(
       JSON.stringify({
         members: [{ name: '앨리스' }], // id 없음
@@ -227,7 +228,7 @@ describe('serializer: 조작된 데이터 방어', () => {
   });
 
   it('세션 데이터에 totalAmount가 문자열인 경우 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent(
       JSON.stringify({
         members: [{ id: 'a', name: '앨리스' }],
@@ -247,7 +248,7 @@ describe('serializer: 조작된 데이터 방어', () => {
   });
 
   it('세션 참여자 ID가 문자열이 아닌 경우 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent(
       JSON.stringify({
         members: [{ id: 'a', name: '앨리스' }],
@@ -267,7 +268,7 @@ describe('serializer: 조작된 데이터 방어', () => {
   });
 
   it('주류 데이터에 unitPrice 누락 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     const compressed = compressToEncodedURIComponent(
       JSON.stringify({
         members: [{ id: 'a', name: '앨리스' }],
@@ -294,7 +295,7 @@ describe('serializer: 조작된 데이터 방어', () => {
 
 describe('serializer: 크기 제한', () => {
   it('MAX_DECOMPRESSED_SIZE 초과 데이터 → 에러', () => {
-    const { compressToEncodedURIComponent } = require('lz-string');
+
     // 100,000자 초과 JSON 생성
     const hugeData = {
       members: Array.from({ length: 5000 }, (_, i) => ({

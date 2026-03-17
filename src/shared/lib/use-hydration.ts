@@ -1,15 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
+
+const subscribe = () => () => {};
+const getSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 /**
  * Zustand persist 미들웨어와 Next.js SSR의 hydration mismatch 방지 훅.
- * 클라이언트 hydration 완료 전까지 false를 반환한다.
+ * 서버에서는 false, 클라이언트에서는 true를 반환한다.
  */
 export function useHydration(): boolean {
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  return hydrated;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

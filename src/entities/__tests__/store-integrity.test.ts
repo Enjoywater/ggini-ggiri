@@ -225,7 +225,7 @@ describe('통합 테스트: 전체 유저 저니', () => {
     expect(useMemberStore.getState().members.length).toBe(3);
 
     // Step 2: 1차 세션 생성 (전원 참여)
-    const session1 = useSessionStore.getState().addSession({
+    useSessionStore.getState().addSession({
       title: '1차 고기집',
       totalAmount: 150000,
       payerId: alice.id,

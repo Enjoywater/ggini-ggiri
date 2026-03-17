@@ -113,6 +113,35 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
     });
   };
 
+  const handleToggleAllParticipants = () => {
+    const allSelected = members.every((m) => session.participantIds.includes(m.id));
+    if (allSelected) {
+      // 전체 해제: 결제자만 남김
+      for (const m of members) {
+        if (m.id !== session.payerId && session.participantIds.includes(m.id)) {
+          toggleParticipant(session.id, m.id);
+        }
+      }
+    } else {
+      // 전체 선택
+      for (const m of members) {
+        if (!session.participantIds.includes(m.id)) {
+          toggleParticipant(session.id, m.id);
+        }
+      }
+    }
+  };
+
+  const handleToggleAllDrinkers = () => {
+    if (!session.alcohol) return;
+    const participants = members.filter((m) => session.participantIds.includes(m.id));
+    const allDrinking = participants.every((m) => session.alcohol!.drinkerIds.includes(m.id));
+    setAlcohol(session.id, {
+      ...session.alcohol,
+      drinkerIds: allDrinking ? [] : participants.map((m) => m.id),
+    });
+  };
+
   const formatAmount = (amount: number) => {
     return amount > 0 ? amount.toLocaleString('ko-KR') : '';
   };
@@ -186,7 +215,17 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
 
         {/* Participant Toggle */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-text-secondary">참여자</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-text-secondary">참여자</span>
+            <button
+              type="button"
+              className="text-xs text-primary-dark hover:underline"
+              onClick={handleToggleAllParticipants}
+              aria-label={members.every((m) => session.participantIds.includes(m.id)) ? '참여자 전체 해제' : '참여자 전체 선택'}
+            >
+              {members.every((m) => session.participantIds.includes(m.id)) ? '전체 해제' : '전체 선택'}
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {members.map((member, i) => (
               <Chip
@@ -242,7 +281,23 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text-secondary">음주자</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-text-secondary">음주자</span>
+                <button
+                  type="button"
+                  className="text-xs text-primary-dark hover:underline"
+                  onClick={handleToggleAllDrinkers}
+                  aria-label={
+                    members.filter((m) => session.participantIds.includes(m.id)).every((m) => session.alcohol!.drinkerIds.includes(m.id))
+                      ? '음주자 전체 해제'
+                      : '음주자 전체 선택'
+                  }
+                >
+                  {members.filter((m) => session.participantIds.includes(m.id)).every((m) => session.alcohol!.drinkerIds.includes(m.id))
+                    ? '전체 해제'
+                    : '전체 선택'}
+                </button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {members
                   .filter((m) => session.participantIds.includes(m.id))

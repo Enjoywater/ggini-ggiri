@@ -5,6 +5,10 @@ import type { ShareableData } from './serializer';
 
 /** 정산 데이터를 Supabase에 저장하고 짧은 ID 반환 */
 export async function saveShare(data: ShareableData): Promise<string> {
+  if (!supabase) {
+    throw new Error('공유 기능이 비활성화되어 있습니다. 환경변수를 확인해 주세요.');
+  }
+
   const id = nanoid(10);
 
   const { error } = await supabase
@@ -24,6 +28,10 @@ export type ShareResult =
 
 /** ID로 정산 데이터 조회 */
 export async function getShare(id: string): Promise<ShareResult> {
+  if (!supabase) {
+    return { ok: false, reason: 'network' };
+  }
+
   const { data, error } = await supabase
     .from('shared_settlements')
     .select('data')

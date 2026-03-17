@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'ggini-v3';
+const CACHE_NAME = 'ggini-v4';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
@@ -21,6 +21,16 @@ self.addEventListener('fetch', (event) => {
 
   // Only cache GET requests
   if (request.method !== 'GET') return;
+
+  // Skip caching for external APIs (Supabase, Kakao SDK, etc.)
+  const url = new URL(request.url);
+  if (
+    url.hostname.includes('supabase') ||
+    url.hostname.includes('kakao') ||
+    url.hostname.includes('googleapis')
+  ) {
+    return;
+  }
 
   // Navigation: network-first
   if (request.mode === 'navigate') {
