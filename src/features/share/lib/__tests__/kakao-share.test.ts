@@ -42,7 +42,7 @@ const data: ShareableData = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  (window as Record<string, unknown>).Kakao = {
+  (window as unknown as Record<string, unknown>).Kakao = {
     Share: { sendDefault: mockSendDefault },
   };
 });

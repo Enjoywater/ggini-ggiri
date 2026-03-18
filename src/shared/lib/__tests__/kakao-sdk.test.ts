@@ -10,7 +10,7 @@ function resetModule() {
 beforeEach(() => {
   resetModule();
   // window.Kakao 초기화
-  delete (window as Record<string, unknown>).Kakao;
+  delete (window as unknown as Record<string, unknown>).Kakao;
 });
 
 afterEach(() => {
@@ -33,7 +33,7 @@ describe('loadKakaoSDK', () => {
     vi.stubEnv('NEXT_PUBLIC_KAKAO_JS_KEY', 'test-key');
 
     const initMock = vi.fn();
-    (window as Record<string, unknown>).Kakao = {
+    (window as unknown as Record<string, unknown>).Kakao = {
       isInitialized: () => false,
       init: initMock,
     };
@@ -52,7 +52,7 @@ describe('loadKakaoSDK', () => {
     vi.stubEnv('NEXT_PUBLIC_KAKAO_JS_KEY', 'test-key');
 
     const initMock = vi.fn();
-    (window as Record<string, unknown>).Kakao = {
+    (window as unknown as Record<string, unknown>).Kakao = {
       isInitialized: () => true,
       init: initMock,
     };
@@ -74,7 +74,7 @@ describe('loadKakaoSDK', () => {
       scripts.push(script);
       // 스크립트 로드 시뮬레이션
       const initMock = vi.fn();
-      (window as Record<string, unknown>).Kakao = {
+      (window as unknown as Record<string, unknown>).Kakao = {
         isInitialized: () => false,
         init: initMock,
       };
@@ -120,7 +120,7 @@ describe('loadKakaoSDK', () => {
 
     vi.spyOn(document.head, 'appendChild').mockImplementation((node) => {
       const script = node as HTMLScriptElement;
-      (window as Record<string, unknown>).Kakao = {
+      (window as unknown as Record<string, unknown>).Kakao = {
         isInitialized: () => false,
         init: vi.fn(),
       };
