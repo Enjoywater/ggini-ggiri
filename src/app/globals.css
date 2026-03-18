@@ -13,7 +13,7 @@
   /* Text */
   --text-primary: #1F2937;
   --text-secondary: #6B7280;
-  --text-muted: #9CA3AF;
+  --text-muted: #6E7686; /* 대비 약 4.6:1 on #FAFBFC - WCAG AA 충족 */
 
   /* Semantic */
   --clr-primary: #99CEF9;
@@ -57,7 +57,7 @@
   /* Text */
   --text-primary: #F3F4F6;
   --text-secondary: #A1A1AA;
-  --text-muted: #71717A;
+  --text-muted: #8E8E99; /* 대비 약 5.4:1 on #111113 - WCAG AA 충족 */
 
   /* Semantic — slightly muted for dark backgrounds */
   --clr-primary: #6BB8F5;

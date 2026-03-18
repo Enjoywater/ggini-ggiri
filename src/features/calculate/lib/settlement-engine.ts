@@ -10,14 +10,23 @@ export interface Transfer {
 }
 
 /**
+ * 세션의 술값 합계를 계산하되, 총액을 초과하지 않도록 상한 제한
+ * 술값(unitPrice × quantity)이 totalAmount보다 크면 totalAmount로 클램핑
+ */
+function getAlcoholTotal(session: Session): Big {
+  if (!session.alcohol) return new Big(0);
+  const raw = new Big(session.alcohol.unitPrice).times(session.alcohol.quantity);
+  const total = new Big(session.totalAmount);
+  return raw.gt(total) ? total : raw;
+}
+
+/**
  * 세션별 1인당 기본 부담액 (술값 제외)
  * = (총액 - 술값) / 참여인원
  */
 export function calculateSessionShare(session: Session): Big {
   const total = new Big(session.totalAmount);
-  const alcoholTotal = session.alcohol
-    ? new Big(session.alcohol.unitPrice).times(session.alcohol.quantity)
-    : new Big(0);
+  const alcoholTotal = getAlcoholTotal(session);
   const base = total.minus(alcoholTotal);
   const participantCount = session.participantIds.length;
 
@@ -28,14 +37,13 @@ export function calculateSessionShare(session: Session): Big {
 /**
  * 세션별 1인당 술값 부담액
  * = (단가 x 수량) / 음주자 수
+ * 술값 상한은 getAlcoholTotal()에서 적용
  */
 export function calculateAlcoholShare(session: Session): Big {
   if (!session.alcohol || session.alcohol.drinkerIds.length === 0) {
     return new Big(0);
   }
-  const alcoholTotal = new Big(session.alcohol.unitPrice).times(
-    session.alcohol.quantity,
-  );
+  const alcoholTotal = getAlcoholTotal(session);
   return alcoholTotal.div(session.alcohol.drinkerIds.length);
 }
 

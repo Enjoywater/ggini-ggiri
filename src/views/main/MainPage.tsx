@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button, Input, Card, Chip, Modal } from '@/shared/ui';
+import { Button, LinkButton, Input, Card, Chip, Modal } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
@@ -11,7 +11,6 @@ import { useHydration } from '@/shared/lib/use-hydration';
 import { PASTEL_COLORS } from '@/shared/lib';
 import { formatAmount } from '@/shared/lib/formatters';
 import { SessionCard } from '@/widgets/session-card';
-import Link from 'next/link';
 
 export function MainPage() {
   const hydrated = useHydration();
@@ -226,16 +225,12 @@ export function MainPage() {
           <p className="text-sm text-text-secondary">N차 정산, 간편하게</p>
         </div>
         <div className="flex gap-1">
-          <Link href="/history" aria-label="정산 기록">
-            <Button variant="ghost" size="sm">
-              기록
-            </Button>
-          </Link>
-          <Link href="/settings" aria-label="설정">
-            <Button variant="ghost" size="sm">
-              설정
-            </Button>
-          </Link>
+          <LinkButton href="/history" aria-label="정산 기록" variant="ghost" size="sm">
+            기록
+          </LinkButton>
+          <LinkButton href="/settings" aria-label="설정" variant="ghost" size="sm">
+            설정
+          </LinkButton>
         </div>
       </div>
 
@@ -284,26 +279,32 @@ export function MainPage() {
                   aria-label="참여자 이름 수정"
                 />
               ) : (
-                <Chip
-                  key={member.id}
-                  selected
-                  color={PASTEL_COLORS[i % PASTEL_COLORS.length]}
-                  onClick={() => handleRemoveMember(member.id)}
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    handleStartEdit(member.id, member.name);
-                  }}
-                  aria-label={`${member.name} (클릭: 삭제, 더블클릭: 수정)`}
-                >
-                  {member.name} &times;
-                </Chip>
+                <div key={member.id} className="inline-flex items-center">
+                  <Chip
+                    selected
+                    color={PASTEL_COLORS[i % PASTEL_COLORS.length]}
+                    onClick={() => handleStartEdit(member.id, member.name)}
+                    role="button"
+                    aria-label={`${member.name} 이름 수정`}
+                  >
+                    {member.name}
+                  </Chip>
+                  <button
+                    type="button"
+                    className="-ml-1 inline-flex items-center justify-center rounded-full p-1.5 -m-1 text-text-muted hover:text-danger-dark hover:bg-danger/10 transition-colors"
+                    onClick={() => handleRemoveMember(member.id)}
+                    aria-label={`${member.name} 삭제`}
+                  >
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
               ),
             )}
           </div>
         )}
         {members.length > 0 && (
           <p className="text-xs text-text-muted mt-1">
-            탭하여 삭제 · 더블탭하여 이름 수정
+            이름을 탭하여 수정 · ✕를 눌러 삭제
           </p>
         )}
 
@@ -408,11 +409,9 @@ export function MainPage() {
               금액이 0원인 세션이 있습니다. 정산 결과에 반영되지 않을 수 있습니다.
             </p>
           )}
-          <Link href="/settlement" className="block">
-            <Button fullWidth size="lg" disabled={!canCalculate}>
-              정산하기
-            </Button>
-          </Link>
+          <LinkButton href="/settlement" fullWidth size="lg" disabled={!canCalculate}>
+            정산하기
+          </LinkButton>
         </div>
       )}
 

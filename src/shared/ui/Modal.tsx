@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { type ReactNode, useCallback, useEffect, useId, useRef } from 'react';
 
 interface ModalProps {
   open: boolean;
@@ -14,7 +14,8 @@ const FOCUSABLE_SELECTOR =
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const titleId = title ? 'modal-title' : undefined;
+  const uniqueId = useId();
+  const titleId = title ? `modal-title-${uniqueId}` : undefined;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -92,16 +93,28 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       }}
       onKeyDown={handleKeyDown}
     >
-      <div className="p-5">
-        {title && (
-          <h2
-            id={titleId}
-            className="mb-4 text-lg font-semibold text-text-primary"
+      <div className="flex max-h-[70dvh] flex-col p-5">
+        {/* 헤더 */}
+        <div className="mb-3 flex items-start justify-between">
+          {title && (
+            <h2
+              id={titleId}
+              className="pr-8 text-lg font-semibold text-text-primary"
+            >
+              {title}
+            </h2>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="-m-1.5 ml-auto inline-flex items-center justify-center rounded-full p-1.5 text-text-muted transition-colors hover:bg-surface hover:text-text-primary"
+            aria-label="닫기"
           >
-            {title}
-          </h2>
-        )}
-        {children}
+            &#x2715;
+          </button>
+        </div>
+        {/* 스크롤 콘텐츠 */}
+        <div className="overflow-y-auto">{children}</div>
       </div>
     </dialog>
   );

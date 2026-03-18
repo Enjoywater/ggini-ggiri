@@ -1,4 +1,7 @@
 export { Button } from './Button';
+export { LinkButton } from './LinkButton';
+export { getButtonClassName } from './button-styles';
+export type { ButtonVariant, ButtonSize } from './button-styles';
 export { Input } from './Input';
 export { Chip } from './Chip';
 export { Card, CardHeader, CardTitle } from './Card';

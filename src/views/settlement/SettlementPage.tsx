@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@/shared/ui';
+import { Button, LinkButton } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
@@ -127,9 +127,7 @@ export function SettlementPage() {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4">
         <p className="text-sm text-text-muted">정산할 데이터가 없습니다.</p>
-        <Link href="/">
-          <Button variant="secondary" size="sm">메인으로 이동</Button>
-        </Link>
+        <LinkButton href="/" variant="secondary" size="sm">메인으로 이동</LinkButton>
       </div>
     );
   }
@@ -138,11 +136,9 @@ export function SettlementPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href="/" aria-label="뒤로 가기">
-          <Button variant="ghost" size="sm">
-            &larr;
-          </Button>
-        </Link>
+        <LinkButton href="/" aria-label="뒤로 가기" variant="ghost" size="sm">
+          &larr;
+        </LinkButton>
         <h1 className="text-xl font-bold text-text-primary">정산 결과</h1>
       </div>
 
@@ -254,11 +250,9 @@ export function SettlementPage() {
       </div>
 
       {/* Back to main */}
-      <Link href="/" className="block">
-        <Button variant="ghost" fullWidth>
-          처음으로
-        </Button>
-      </Link>
+      <LinkButton href="/" variant="ghost" fullWidth>
+        처음으로
+      </LinkButton>
     </div>
   );
 }

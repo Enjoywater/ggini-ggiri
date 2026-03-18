@@ -93,49 +93,47 @@ describe('serializer: 정상 동작', () => {
 // ═══════════════════════════════════════════════════════
 
 describe('serializer: XSS 방어', () => {
-  it('script 태그가 포함된 이름 → sanitize 처리됨', () => {
+  it('script 태그가 포함된 이름 → sanitize 처리됨 (태그 제거)', () => {
     const data = makeValidData();
     data.members[0].name = '<script>alert("XSS")</script>';
     const compressed = compressData(data);
     const restored = decompressData(compressed);
-    // sanitize가 적용되어 < > 가 이스케이프됨
+    // sanitize가 HTML 태그를 제거함
     expect(restored.members[0].name).not.toContain('<script>');
-    expect(restored.members[0].name).toContain('&lt;script&gt;');
+    expect(restored.members[0].name).toBe('alert("XSS")');
   });
 
-  it('img onerror 페이로드 → sanitize 처리', () => {
+  it('img onerror 페이로드 → sanitize 후 빈 문자열이면 에러', () => {
     const data = makeValidData();
     data.members[0].name = '<img src=x onerror=alert(1)>';
     const compressed = compressData(data);
-    const restored = decompressData(compressed);
-    expect(restored.members[0].name).not.toContain('<img');
-    expect(restored.members[0].name).toContain('&lt;img');
+    expect(() => decompressData(compressed)).toThrow('잘못된 멤버 데이터');
   });
 
-  it('이벤트 핸들러 인젝션 → sanitize 처리', () => {
+  it('이벤트 핸들러 인젝션 → 따옴표 원본 유지', () => {
     const data = makeValidData();
     data.sessions[0].title = '" onmouseover="alert(1)"';
     const compressed = compressData(data);
     const restored = decompressData(compressed);
-    expect(restored.sessions[0].title).not.toContain('"');
-    expect(restored.sessions[0].title).toContain('&quot;');
+    // React JSX가 자동 이스케이핑하므로 원본 유지
+    expect(restored.sessions[0].title).toBe('" onmouseover="alert(1)"');
   });
 
-  it('작은따옴표 인젝션 → sanitize 처리', () => {
+  it('작은따옴표 인젝션 → 원본 유지', () => {
     const data = makeValidData();
     data.members[0].name = "'; DROP TABLE users; --";
     const compressed = compressData(data);
     const restored = decompressData(compressed);
-    expect(restored.members[0].name).toContain('&#x27;');
+    expect(restored.members[0].name).toBe("'; DROP TABLE users; --");
   });
 
-  it('앰퍼샌드 인젝션 → sanitize 처리', () => {
+  it('앰퍼샌드 포함 문자열 → 이중 인코딩 없이 원본 유지', () => {
     const data = makeValidData();
     data.members[0].name = '&lt;script&gt;alert(1)&lt;/script&gt;';
     const compressed = compressData(data);
     const restored = decompressData(compressed);
-    // 이중 이스케이프: & → &amp;
-    expect(restored.members[0].name).toContain('&amp;lt;');
+    // 이중 인코딩 없이 원본 유지
+    expect(restored.members[0].name).toBe('&lt;script&gt;alert(1)&lt;/script&gt;');
   });
 });
 
@@ -292,6 +290,43 @@ describe('serializer: 조작된 데이터 방어', () => {
 // ═══════════════════════════════════════════════════════
 // 5. URL 크기 제한
 // ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// 6. transfers 필드 라운드트립
+// ═══════════════════════════════════════════════════════
+
+describe('serializer: transfers 필드', () => {
+  it('transfers 포함 데이터 라운드트립', () => {
+    const data = makeValidData();
+    (data as ShareableData).transfers = [
+      { from: '앨리스', to: '밥', amount: 50000 },
+    ];
+    const compressed = compressData(data);
+    const restored = decompressData(compressed);
+    expect(restored.transfers).toBeDefined();
+    expect(restored.transfers!.length).toBe(1);
+    expect(restored.transfers![0]).toEqual({ from: '앨리스', to: '밥', amount: 50000 });
+  });
+
+  it('transfers 없이도 정상 동작 (하위 호환)', () => {
+    const data = makeValidData();
+    const compressed = compressData(data);
+    const restored = decompressData(compressed);
+    expect(restored.transfers).toBeUndefined();
+  });
+
+  it('잘못된 transfer 데이터 → 에러', () => {
+    const compressed = compressToEncodedURIComponent(
+      JSON.stringify({
+        members: [{ id: 'a', name: '앨리스' }],
+        sessions: [],
+        settlement: [],
+        transfers: [{ from: 123, to: '밥', amount: 50000 }],
+      }),
+    );
+    expect(() => decompressData(compressed)).toThrow('잘못된 송금');
+  });
+});
 
 describe('serializer: 크기 제한', () => {
   it('MAX_DECOMPRESSED_SIZE 초과 데이터 → 에러', () => {

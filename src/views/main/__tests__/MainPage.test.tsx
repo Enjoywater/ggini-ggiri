@@ -131,12 +131,12 @@ describe('MainPage - 참여자 관리', () => {
     expect(useMemberStore.getState().members).toHaveLength(0);
   });
 
-  it('참여자 Chip 클릭 시 삭제 모달 표시', async () => {
+  it('X 버튼 클릭 시 삭제 모달 표시', async () => {
     const user = userEvent.setup();
     useMemberStore.getState().addMember('앨리스');
     render(<MainPage />);
 
-    await user.click(screen.getByLabelText('앨리스 (클릭: 삭제, 더블클릭: 수정)'));
+    await user.click(screen.getByLabelText('앨리스 삭제'));
     expect(screen.getByText('참여자 삭제')).toBeInTheDocument();
   });
 
@@ -145,7 +145,7 @@ describe('MainPage - 참여자 관리', () => {
     useMemberStore.getState().addMember('앨리스');
     render(<MainPage />);
 
-    await user.click(screen.getByLabelText('앨리스 (클릭: 삭제, 더블클릭: 수정)'));
+    await user.click(screen.getByLabelText('앨리스 삭제'));
     // 참여자 삭제 모달 내의 삭제 버튼 (첫 번째 매칭)
     const deleteButtons = screen.getAllByRole('button', { name: '삭제', hidden: true });
     await user.click(deleteButtons[0]);
@@ -158,7 +158,7 @@ describe('MainPage - 참여자 관리', () => {
     useMemberStore.getState().addMember('앨리스');
     render(<MainPage />);
 
-    await user.click(screen.getByLabelText('앨리스 (클릭: 삭제, 더블클릭: 수정)'));
+    await user.click(screen.getByLabelText('앨리스 삭제'));
     const cancelButtons = screen.getAllByRole('button', { name: '취소', hidden: true });
     await user.click(cancelButtons[0]);
 
@@ -177,7 +177,7 @@ describe('MainPage - 참여자 관리', () => {
     });
     render(<MainPage />);
 
-    await user.click(screen.getByLabelText('밥 (클릭: 삭제, 더블클릭: 수정)'));
+    await user.click(screen.getByLabelText('밥 삭제'));
     const deleteButtons = screen.getAllByRole('button', { name: '삭제', hidden: true });
     await user.click(deleteButtons[0]);
 
@@ -185,13 +185,13 @@ describe('MainPage - 참여자 관리', () => {
     expect(session.participantIds).not.toContain(bob.id);
   });
 
-  it('더블클릭으로 이름 수정 모드 진입', async () => {
+  it('Chip 클릭으로 이름 수정 모드 진입', async () => {
     const user = userEvent.setup();
     useMemberStore.getState().addMember('앨리스');
     render(<MainPage />);
 
-    const chip = screen.getByLabelText('앨리스 (클릭: 삭제, 더블클릭: 수정)');
-    await user.dblClick(chip);
+    const chip = screen.getByLabelText('앨리스 이름 수정');
+    await user.click(chip);
 
     expect(screen.getByLabelText('참여자 이름 수정')).toBeInTheDocument();
     expect(screen.getByLabelText('참여자 이름 수정')).toHaveValue('앨리스');
@@ -199,11 +199,11 @@ describe('MainPage - 참여자 관리', () => {
 
   it('도움 텍스트가 참여자 있을 때만 표시', () => {
     const { rerender } = render(<MainPage />);
-    expect(screen.queryByText(/더블탭/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/이름을 탭하여 수정/)).not.toBeInTheDocument();
 
     useMemberStore.getState().addMember('앨리스');
     rerender(<MainPage />);
-    expect(screen.getByText(/더블탭/)).toBeInTheDocument();
+    expect(screen.getByText(/이름을 탭하여 수정/)).toBeInTheDocument();
   });
 });
 
@@ -341,7 +341,7 @@ describe('MainPage - 합계 및 정산 버튼', () => {
     render(<MainPage />);
 
     expect(screen.getByText('정산하기')).toBeInTheDocument();
-    expect(screen.getByText('정산하기').closest('button')).toBeDisabled();
+    expect(screen.getByText('정산하기').closest('a')).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('정산 가능 시 정산 링크 활성화', () => {

@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Card, Modal } from '@/shared/ui';
+import { Button, LinkButton, Card, Modal } from '@/shared/ui';
 import { useHistoryStore } from '@/entities/history';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { SettlementResult } from '@/widgets/settlement-result';
 import type { SettlementHistory } from '@/shared/types';
-import Link from 'next/link';
 import { formatDate, formatAmount, findMainPayer } from '@/shared/lib/formatters';
 
 function MemberNamesText({ names }: { names: string[] }) {
@@ -97,11 +96,9 @@ export function HistoryPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href="/" aria-label="뒤로 가기">
-          <Button variant="ghost" size="sm">
-            &larr;
-          </Button>
-        </Link>
+        <LinkButton href="/" aria-label="뒤로 가기" variant="ghost" size="sm">
+          &larr;
+        </LinkButton>
         <h1 className="text-xl font-bold text-text-primary">정산 기록</h1>
       </div>
 

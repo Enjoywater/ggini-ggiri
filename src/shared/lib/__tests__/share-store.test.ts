@@ -100,6 +100,63 @@ describe('getShare', () => {
   });
 });
 
+describe('saveShare - 크기 제한', () => {
+  it('100KB 초과 데이터 저장 시 에러', async () => {
+    // 100KB를 초과하는 큰 데이터 생성
+    const largeData = {
+      members: [],
+      sessions: Array.from({ length: 5000 }, (_, i) => ({
+        id: `session-${i}`,
+        title: 'A'.repeat(100),
+        totalAmount: 10000,
+        payerId: 'payer',
+        participantIds: ['a', 'b', 'c'],
+      })),
+      settlement: [],
+    };
+
+    await expect(saveShare(largeData)).rejects.toThrow(
+      '정산 데이터가 너무 큽니다. 세션 수를 줄여주세요.',
+    );
+    // INSERT가 호출되지 않아야 함
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it('100KB 이하 데이터는 정상 저장', async () => {
+    mockInsert.mockResolvedValue({ error: null });
+
+    const smallData = { members: [], sessions: [], settlement: [] };
+    const id = await saveShare(smallData);
+
+    expect(id).toBe('mock-id-10');
+    expect(mockInsert).toHaveBeenCalled();
+  });
+});
+
+describe('getShare - ID 형식 검증', () => {
+  it('빈 문자열 ID는 not_found 반환', async () => {
+    const result = await getShare('');
+    expect(result).toEqual({ ok: false, reason: 'not_found' });
+    // Supabase가 호출되지 않아야 함
+    expect(mockSingle).not.toHaveBeenCalled();
+  });
+
+  it('21자 초과 ID는 not_found 반환', async () => {
+    const longId = 'a'.repeat(22);
+    const result = await getShare(longId);
+    expect(result).toEqual({ ok: false, reason: 'not_found' });
+    expect(mockSingle).not.toHaveBeenCalled();
+  });
+
+  it('21자 이하 유효한 ID는 정상 조회', async () => {
+    const shareData = { members: [], sessions: [], settlement: [] };
+    mockSingle.mockResolvedValue({ data: { data: shareData }, error: null });
+
+    const result = await getShare('valid-id');
+    expect(result).toEqual({ ok: true, data: shareData });
+  });
+});
+
 describe('getShare - supabase가 null인 경우', () => {
   it('supabase가 null이면 network 에러 반환', async () => {
     // 이 케이스는 supabase 모듈이 null을 반환하는 상황을 테스트

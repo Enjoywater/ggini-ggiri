@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button, Input, Card, CardTitle, Modal, Chip } from '@/shared/ui';
+import { Button, LinkButton, Input, Card, CardTitle, Modal, Chip } from '@/shared/ui';
 import { useAccountStore } from '@/entities/account';
 import { useThemeStore, type ThemeMode } from '@/entities/theme';
 import { useMemberStore } from '@/entities/member';
@@ -12,7 +12,6 @@ import { useTransferCompletionStore } from '@/entities/transfer-completion';
 import { validateAccountNumber, validateBankName, validateOwnerName } from '@/shared/lib/validators';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { ExportImportButtons } from '@/features/export-import';
-import Link from 'next/link';
 
 export function SettingsPage() {
   const hydrated = useHydration();
@@ -111,11 +110,9 @@ export function SettingsPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href="/" aria-label="뒤로 가기">
-          <Button variant="ghost" size="sm">
-            &larr;
-          </Button>
-        </Link>
+        <LinkButton href="/" aria-label="뒤로 가기" variant="ghost" size="sm">
+          &larr;
+        </LinkButton>
         <h1 className="text-xl font-bold text-text-primary">설정</h1>
       </div>
 

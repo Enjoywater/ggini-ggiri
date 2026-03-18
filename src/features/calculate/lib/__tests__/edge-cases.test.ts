@@ -406,6 +406,179 @@ describe('엣지 케이스: 동일인 다중 결제', () => {
 });
 
 // ═══════════════════════════════════════════════════════
+// 1-1. 술값 > 총액 방어 (TASK-002)
+// ═══════════════════════════════════════════════════════
+
+describe('엣지 케이스: 술값 >= 총액 방어 (TASK-002)', () => {
+  it('술값 == 총액: base 0, 비음주자 부담 0, 잔액 합계 0', () => {
+    const members = [
+      makeMember('A', '앨리스'),
+      makeMember('B', '밥'),
+      makeMember('C', '찰리'),
+    ];
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '술값이 총액과 동일',
+        totalAmount: 40000,
+        payerId: 'A',
+        participantIds: ['A', 'B', 'C'],
+        alcohol: {
+          unitPrice: 10000,
+          quantity: 4, // 40000 == totalAmount
+          drinkerIds: ['A', 'B'],
+        },
+      },
+    ];
+
+    // base = 40000 - 40000 = 0 → 비음주자 부담 0
+    const baseShare = calculateSessionShare(sessions[0]);
+    expect(baseShare.toNumber()).toBe(0);
+
+    // 술값: 40000 / 2 = 20000
+    const alcoholShare = calculateAlcoholShare(sessions[0]);
+    expect(alcoholShare.toNumber()).toBe(20000);
+
+    const balances = calculateBalance(sessions, members);
+    // C(비음주자)는 부담 0
+    expect(balances.get('C')!.toNumber()).toBe(0);
+
+    // 잔액 합계 0
+    let sum = new Big(0);
+    for (const v of balances.values()) sum = sum.plus(v);
+    expect(sum.toNumber()).toBe(0);
+  });
+
+  it('술값 > 총액: alcoholTotal이 total로 클램핑, 잔액 합계 0', () => {
+    const members = [
+      makeMember('A', '앨리스'),
+      makeMember('B', '밥'),
+    ];
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '술값 초과',
+        totalAmount: 30000,
+        payerId: 'A',
+        participantIds: ['A', 'B'],
+        alcohol: {
+          unitPrice: 10000,
+          quantity: 5, // 50000 > 30000
+          drinkerIds: ['A', 'B'],
+        },
+      },
+    ];
+
+    // alcoholTotal이 30000으로 클램핑됨
+    // base = 30000 - 30000 = 0
+    const baseShare = calculateSessionShare(sessions[0]);
+    expect(baseShare.toNumber()).toBe(0);
+
+    // 술값: 30000(클램핑) / 2 = 15000
+    const alcoholShare = calculateAlcoholShare(sessions[0]);
+    expect(alcoholShare.toNumber()).toBe(15000);
+
+    const balances = calculateBalance(sessions, members);
+    // A: 지출 30000, 부담 15000 → 잔액 15000
+    // B: 지출 0, 부담 15000 → 잔액 -15000
+    expect(balances.get('A')!.toNumber()).toBe(15000);
+    expect(balances.get('B')!.toNumber()).toBe(-15000);
+
+    // 잔액 합계 0
+    let sum = new Big(0);
+    for (const v of balances.values()) sum = sum.plus(v);
+    expect(sum.toNumber()).toBe(0);
+  });
+
+  it('술값 > 총액 + 비음주자 존재: 비음주자 부담 0', () => {
+    const members = [
+      makeMember('A', '앨리스'),
+      makeMember('B', '밥'),
+      makeMember('C', '찰리'),
+    ];
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '술값 초과 + 비음주자',
+        totalAmount: 50000,
+        payerId: 'A',
+        participantIds: ['A', 'B', 'C'],
+        alcohol: {
+          unitPrice: 20000,
+          quantity: 4, // 80000 > 50000
+          drinkerIds: ['A', 'B'],
+        },
+      },
+    ];
+
+    // alcoholTotal이 50000으로 클램핑됨
+    // base = 50000 - 50000 = 0 → 비음주자 부담 0
+    const baseShare = calculateSessionShare(sessions[0]);
+    expect(baseShare.toNumber()).toBe(0);
+
+    // 술값: 50000(클램핑) / 2 = 25000
+    const alcoholShare = calculateAlcoholShare(sessions[0]);
+    expect(alcoholShare.toNumber()).toBe(25000);
+
+    const balances = calculateBalance(sessions, members);
+    // C(비음주자)는 부담 0
+    expect(balances.get('C')!.toNumber()).toBe(0);
+
+    // 잔액 합계 0
+    let sum = new Big(0);
+    for (const v of balances.values()) sum = sum.plus(v);
+    expect(sum.toNumber()).toBe(0);
+  });
+
+  it('settle() 결과도 술값 > 총액에서 정합성 유지', () => {
+    const members = [
+      makeMember('A', '앨리스'),
+      makeMember('B', '밥'),
+      makeMember('C', '찰리'),
+    ];
+    const sessions: Session[] = [
+      {
+        id: 's1',
+        title: '술값 초과 settle',
+        totalAmount: 30000,
+        payerId: 'A',
+        participantIds: ['A', 'B', 'C'],
+        alcohol: {
+          unitPrice: 15000,
+          quantity: 3, // 45000 > 30000
+          drinkerIds: ['A', 'B'],
+        },
+      },
+    ];
+
+    const results = settle(sessions, members);
+    const balances = calculateBalance(sessions, members);
+
+    // settle()의 subtotal 합계 = 세션 총액
+    const subtotalSum = results.reduce((sum, r) => {
+      const detail = r.details.find((d) => d.sessionId === 's1');
+      return sum + (detail?.subtotal ?? 0);
+    }, 0);
+    expect(subtotalSum).toBe(30000);
+
+    // settle() totalAmount와 calculateBalance() 부담액 일치
+    const payments = new Map<string, Big>([
+      ['A', new Big(30000)],
+      ['B', new Big(0)],
+      ['C', new Big(0)],
+    ]);
+    for (const r of results) {
+      const paid = payments.get(r.memberId) ?? new Big(0);
+      const burden = new Big(r.totalAmount);
+      const expectedBalance = paid.minus(burden);
+      expect(expectedBalance.toNumber()).toBe(
+        balances.get(r.memberId)!.toNumber(),
+      );
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════
 // 2. floor100 및 adjustRemainder 추가 엣지 케이스
 // ═══════════════════════════════════════════════════════
 

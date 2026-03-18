@@ -61,7 +61,8 @@ describe('Accessibility', () => {
       const dialog = container.querySelector('dialog');
       const titleId = dialog?.getAttribute('aria-labelledby');
       expect(titleId).toBeTruthy();
-      const titleEl = container.querySelector(`#${titleId}`);
+      expect(titleId).toMatch(/^modal-title-/);
+      const titleEl = document.getElementById(titleId!);
       expect(titleEl).toHaveTextContent('My Title');
     });
 

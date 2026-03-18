@@ -5,10 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { decompressData } from '@/shared/lib/serializer';
 import { getShare } from '@/shared/lib/share-store';
 import type { ShareableData } from '@/shared/lib/serializer';
-import { Card, CardTitle, Button } from '@/shared/ui';
+import { Card, CardTitle, LinkButton } from '@/shared/ui';
 import { formatAmount } from '@/shared/lib/formatters';
 import { Suspense } from 'react';
-import Link from 'next/link';
 
 function DetailContent() {
   const searchParams = useSearchParams();
@@ -78,11 +77,9 @@ function DetailContent() {
           <p className="mt-2 text-xs text-text-muted">
             링크가 잘못되었거나 만료되었을 수 있습니다.
           </p>
-          <Link href="/" className="mt-4 inline-block">
-            <Button variant="secondary" size="sm">
-              메인으로 이동
-            </Button>
-          </Link>
+          <LinkButton href="/" className="mt-4 inline-block" variant="secondary" size="sm">
+            메인으로 이동
+          </LinkButton>
         </Card>
       </div>
     );

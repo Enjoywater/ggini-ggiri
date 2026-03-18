@@ -62,14 +62,40 @@ describe('Modal', () => {
     expect(screen.getByText('Confirm')).toBeInTheDocument();
   });
 
-  it('sets aria-labelledby from title', () => {
+  it('sets aria-labelledby from title with unique id', () => {
     render(
       <Modal open={false} onClose={() => {}} title="My Dialog">
         Body
       </Modal>,
     );
     const dialog = screen.getByRole('dialog', { hidden: true });
-    expect(dialog).toHaveAttribute('aria-labelledby', 'modal-title');
+    const labelledBy = dialog.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    expect(labelledBy).toMatch(/^modal-title-/);
+  });
+
+  it('renders X close button that calls onClose', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Modal open={true} onClose={onClose} title="Dialog">
+        Body
+      </Modal>,
+    );
+    const closeBtn = screen.getByRole('button', { name: '닫기', hidden: true });
+    expect(closeBtn).toBeInTheDocument();
+    await user.click(closeBtn);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('renders X close button even without title', () => {
+    render(
+      <Modal open={false} onClose={() => {}}>
+        Body
+      </Modal>,
+    );
+    const closeBtn = screen.getByRole('button', { name: '닫기', hidden: true });
+    expect(closeBtn).toBeInTheDocument();
   });
 
   it('calls onClose when backdrop (dialog element) is clicked', async () => {

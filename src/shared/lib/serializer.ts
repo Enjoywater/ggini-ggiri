@@ -57,7 +57,12 @@ export function validateShareableData(data: unknown): ShareableData {
   const sessions = obj.sessions.map(validateSession);
   const settlement = obj.settlement.map(validateSettlementResult);
 
-  return { members, sessions, settlement };
+  let transfers: ShareableData['transfers'];
+  if (Array.isArray(obj.transfers)) {
+    transfers = obj.transfers.map(validateTransfer);
+  }
+
+  return { members, sessions, settlement, ...(transfers ? { transfers } : {}) };
 }
 
 function validateMember(raw: unknown): Member {
@@ -66,7 +71,12 @@ function validateMember(raw: unknown): Member {
   if (typeof m.id !== 'string' || typeof m.name !== 'string') {
     throw new Error('잘못된 멤버 데이터');
   }
-  return { id: sanitize(m.id), name: sanitize(m.name) };
+  const id = sanitize(m.id);
+  const name = sanitize(m.name);
+  if (id.length === 0 || name.length === 0) {
+    throw new Error('잘못된 멤버 데이터');
+  }
+  return { id, name };
 }
 
 function validateSession(raw: unknown): Session {
@@ -83,11 +93,17 @@ function validateSession(raw: unknown): Session {
     throw new Error('잘못된 세션 데이터');
   }
 
+  const sessionId = sanitize(s.id);
+  const payerId = sanitize(s.payerId);
+  if (sessionId.length === 0 || payerId.length === 0) {
+    throw new Error('잘못된 세션 데이터');
+  }
+
   const session: Session = {
-    id: sanitize(s.id),
-    title: sanitize(s.title),
+    id: sessionId,
+    title: sanitize(s.title) || '제목 없음',
     totalAmount: s.totalAmount,
-    payerId: sanitize(s.payerId),
+    payerId,
     participantIds: s.participantIds.map((id) => {
       if (typeof id !== 'string') throw new Error('잘못된 참여자 ID');
       return sanitize(id);
@@ -156,12 +172,22 @@ function validateSettlementResult(raw: unknown): SettlementResult {
   };
 }
 
-/** HTML/script 인젝션 방지를 위한 문자열 sanitize */
+function validateTransfer(raw: unknown): { from: string; to: string; amount: number } {
+  if (!raw || typeof raw !== 'object') throw new Error('잘못된 송금 데이터');
+  const t = raw as Record<string, unknown>;
+  if (typeof t.from !== 'string' || typeof t.to !== 'string' || typeof t.amount !== 'number') {
+    throw new Error('잘못된 송금 데이터');
+  }
+  if (!Number.isFinite(t.amount) || t.amount <= 0) {
+    throw new Error('잘못된 송금 금액');
+  }
+  return { from: sanitize(t.from), to: sanitize(t.to), amount: t.amount };
+}
+
+/** 제어 문자 제거 + HTML 태그 제거 (XSS 방어는 React JSX 자동 이스케이핑에 위임) */
 function sanitize(str: string): string {
   return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
+    .slice(0, 200)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/<[^>]*>/g, '');
 }
