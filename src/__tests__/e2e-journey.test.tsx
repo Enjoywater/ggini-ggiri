@@ -607,8 +607,8 @@ describe('E2E: 엣지 케이스', () => {
   });
 
   it('세션 0건에서 정산 시도 → 빈 결과', () => {
-    const alice = useMemberStore.getState().addMember('앨리스');
-    const bob = useMemberStore.getState().addMember('밥');
+    useMemberStore.getState().addMember('앨리스');
+    useMemberStore.getState().addMember('밥');
 
     const members = useMemberStore.getState().members;
     const sessions = useSessionStore.getState().sessions;
