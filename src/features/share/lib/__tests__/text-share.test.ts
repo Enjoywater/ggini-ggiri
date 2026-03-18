@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { buildSettlementText } from '../text-share';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { buildSettlementText, shareText } from '../text-share';
 import type { Transfer } from '@/features/calculate';
 import type { Member, Session, SettlementResult, UserAccount } from '@/shared/types';
 
@@ -184,5 +184,81 @@ describe('buildSettlementText', () => {
 
     expect(text).not.toContain('[세션별 내역]');
     expect(text).not.toContain('[개인별 부담액]');
+  });
+});
+
+describe('shareText', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('Web Share API가 있으면 navigator.share 호출 후 "shared" 반환', async () => {
+    const shareMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', {
+      value: shareMock,
+      configurable: true,
+    });
+
+    const result = await shareText('테스트 텍스트');
+    expect(result).toBe('shared');
+    expect(shareMock).toHaveBeenCalledWith({ text: '테스트 텍스트' });
+
+    Object.defineProperty(navigator, 'share', {
+      value: undefined,
+      configurable: true,
+    });
+  });
+
+  it('Web Share API가 없으면 clipboard fallback 후 "copied" 반환', async () => {
+    Object.defineProperty(navigator, 'share', {
+      value: undefined,
+      configurable: true,
+    });
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+
+    const result = await shareText('테스트 텍스트');
+    expect(result).toBe('copied');
+    expect(writeTextMock).toHaveBeenCalledWith('테스트 텍스트');
+  });
+
+  it('AbortError는 그대로 throw', async () => {
+    const abortError = new Error('User cancelled');
+    abortError.name = 'AbortError';
+    Object.defineProperty(navigator, 'share', {
+      value: vi.fn().mockRejectedValue(abortError),
+      configurable: true,
+    });
+
+    await expect(shareText('텍스트')).rejects.toThrow('User cancelled');
+
+    Object.defineProperty(navigator, 'share', {
+      value: undefined,
+      configurable: true,
+    });
+  });
+
+  it('share 실패 시 (AbortError 제외) clipboard fallback', async () => {
+    Object.defineProperty(navigator, 'share', {
+      value: vi.fn().mockRejectedValue(new Error('not supported')),
+      configurable: true,
+    });
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+
+    const result = await shareText('테스트 텍스트');
+    expect(result).toBe('copied');
+    expect(writeTextMock).toHaveBeenCalledWith('테스트 텍스트');
+
+    Object.defineProperty(navigator, 'share', {
+      value: undefined,
+      configurable: true,
+    });
   });
 });

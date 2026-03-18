@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatAmount } from '@/shared/lib/formatters';
+import { formatDate, formatAmount, findMainPayer } from '@/shared/lib/formatters';
+import type { Member, Session } from '@/shared/types';
 
 // ═══════════════════════════════════════════════════════
 // HistoryPage 포맷터 함수 테스트
@@ -52,5 +53,64 @@ describe('formatAmount', () => {
 
   it('정확히 1000원을 올바르게 처리', () => {
     expect(formatAmount(1000)).toBe('1,000원');
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// findMainPayer 테스트
+// ═══════════════════════════════════════════════════════
+
+const members: Member[] = [
+  { id: 'A', name: '앨리스' },
+  { id: 'B', name: '밥' },
+  { id: 'C', name: '찰리' },
+];
+
+describe('findMainPayer', () => {
+  it('가장 많이 결제한 멤버를 반환', () => {
+    const sessions: Session[] = [
+      { id: 's1', title: '1차', totalAmount: 100000, payerId: 'A', participantIds: ['A', 'B'] },
+      { id: 's2', title: '2차', totalAmount: 50000, payerId: 'B', participantIds: ['A', 'B'] },
+      { id: 's3', title: '3차', totalAmount: 30000, payerId: 'A', participantIds: ['A', 'B'] },
+    ];
+
+    const result = findMainPayer(sessions, members);
+    expect(result?.id).toBe('A');
+    expect(result?.name).toBe('앨리스');
+  });
+
+  it('세션이 비어있으면 undefined 반환', () => {
+    const result = findMainPayer([], members);
+    expect(result).toBeUndefined();
+  });
+
+  it('세션이 하나면 해당 결제자 반환', () => {
+    const sessions: Session[] = [
+      { id: 's1', title: '1차', totalAmount: 80000, payerId: 'B', participantIds: ['A', 'B'] },
+    ];
+
+    const result = findMainPayer(sessions, members);
+    expect(result?.id).toBe('B');
+    expect(result?.name).toBe('밥');
+  });
+
+  it('같은 금액이면 먼저 초과한 멤버 반환', () => {
+    const sessions: Session[] = [
+      { id: 's1', title: '1차', totalAmount: 50000, payerId: 'A', participantIds: ['A', 'B'] },
+      { id: 's2', title: '2차', totalAmount: 50000, payerId: 'B', participantIds: ['A', 'B'] },
+    ];
+
+    // A가 먼저 50000에 도달, B는 같은 금액이지만 > 비교에서 초과하지 못해 A 유지
+    const result = findMainPayer(sessions, members);
+    expect(result?.id).toBe('A');
+  });
+
+  it('결제자 ID가 멤버 목록에 없으면 undefined 반환', () => {
+    const sessions: Session[] = [
+      { id: 's1', title: '1차', totalAmount: 50000, payerId: 'unknown', participantIds: ['A'] },
+    ];
+
+    const result = findMainPayer(sessions, members);
+    expect(result).toBeUndefined();
   });
 });

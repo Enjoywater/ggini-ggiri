@@ -9,6 +9,7 @@ import { settle, calculateBalance, optimizeTransfers } from '@/features/calculat
 import { buildSettlementText } from '@/features/share/lib/text-share';
 import { formatAmount } from '@/shared/lib/formatters';
 import type { Member } from '@/shared/types';
+import Big from 'big.js';
 
 // ═══════════════════════════════════════════════════════
 // E2E 유저 저니 테스트 (전체 플로우 검증)
@@ -158,10 +159,10 @@ describe('E2E: 대학생 MT (5명, 3차, 술값 분리)', () => {
     const sessions = useSessionStore.getState().sessions;
     const balances = calculateBalance(sessions, allMembers);
 
-    // 모든 잔액의 합은 0이어야 함 (Big 타입)
-    let total = 0;
-    balances.forEach((b) => (total += Number(b)));
-    expect(total).toBe(0);
+    // 모든 잔액의 합은 0이어야 함 (Big 정밀 합산)
+    let total = new Big(0);
+    balances.forEach((b) => (total = total.plus(b)));
+    expect(Number(total)).toBe(0);
   });
 
   it('술값은 음주자에게만 부과', () => {
@@ -304,11 +305,18 @@ describe('E2E: 송금 완료 토글', () => {
     const bob = useMemberStore.getState().addMember('밥');
 
     const key = getTransferKey(bob.id, alice.id, 50000);
+
+    // 초기 상태: 미완료
+    expect(useTransferCompletionStore.getState().isCompleted(key)).toBe(false);
+
+    // 토글 → 완료
     useTransferCompletionStore.getState().toggleCompletion(key);
+    expect(useTransferCompletionStore.getState().isCompleted(key)).toBe(true);
     expect(useTransferCompletionStore.getState().completions[key]).toBe(true);
 
+    // 재토글 → 미완료
     useTransferCompletionStore.getState().toggleCompletion(key);
-    // 두 번 토글하면 false (not undefined - !true = false)
+    expect(useTransferCompletionStore.getState().isCompleted(key)).toBe(false);
     expect(useTransferCompletionStore.getState().completions[key]).toBe(false);
   });
 
@@ -520,6 +528,32 @@ describe('E2E: 세션 복제', () => {
     const sessions = useSessionStore.getState().sessions;
     expect(sessions[0].id).not.toBe(sessions[1].id);
   });
+
+  it('복제된 세션의 데이터가 원본과 동일 (ID, 제목 제외)', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+
+    useSessionStore.getState().addSession({
+      title: '1차 고기집',
+      totalAmount: 80000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id],
+      alcohol: {
+        unitPrice: 5000,
+        quantity: 2,
+        drinkerIds: [alice.id],
+      },
+    });
+
+    const original = useSessionStore.getState().sessions[0];
+    useSessionStore.getState().duplicateSession(original.id);
+
+    const [, duplicated] = useSessionStore.getState().sessions;
+    expect(duplicated.totalAmount).toBe(original.totalAmount);
+    expect(duplicated.payerId).toBe(original.payerId);
+    expect(duplicated.participantIds).toEqual(original.participantIds);
+    expect(duplicated.alcohol).toEqual(original.alcohol);
+  });
 });
 
 // ── Journey 9: 엣지 케이스 - 동일 금액 정산 ─────────
@@ -566,9 +600,91 @@ describe('E2E: 엣지 케이스', () => {
     const sessions = useSessionStore.getState().sessions;
     const balances = calculateBalance(sessions, members);
 
-    // 잔액 합 = 0 (Big 타입)
-    let sum = 0;
-    balances.forEach((b) => (sum += Number(b)));
-    expect(sum).toBe(0);
+    // 잔액 합 = 0 (Big 정밀 합산)
+    let sum = new Big(0);
+    balances.forEach((b) => (sum = sum.plus(b)));
+    expect(Number(sum)).toBe(0);
+  });
+
+  it('세션 0건에서 정산 시도 → 빈 결과', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+
+    const members = useMemberStore.getState().members;
+    const sessions = useSessionStore.getState().sessions;
+    expect(sessions).toHaveLength(0);
+
+    const results = settle(sessions, members);
+    expect(results).toHaveLength(2);
+    // 모든 결과의 totalAmount = 0, details 비어있음
+    for (const r of results) {
+      expect(r.totalAmount).toBe(0);
+      expect(r.details).toHaveLength(0);
+    }
+
+    const balances = calculateBalance(sessions, members);
+    const transfers = optimizeTransfers(balances);
+    expect(transfers).toHaveLength(0);
+  });
+
+  it('멤버 1명만으로 정산 → 송금 0건', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+
+    useSessionStore.getState().addSession({
+      title: '혼밥',
+      totalAmount: 15000,
+      payerId: alice.id,
+      participantIds: [alice.id],
+    });
+
+    const members = useMemberStore.getState().members;
+    const sessions = useSessionStore.getState().sessions;
+    const results = settle(sessions, members);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].totalAmount).toBe(15000);
+
+    const balances = calculateBalance(sessions, members);
+    const transfers = optimizeTransfers(balances);
+    expect(transfers).toHaveLength(0);
+  });
+
+  it('고액 정산 (1000만원 이상)에서도 잔액 합 = 0', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+    const charlie = useMemberStore.getState().addMember('찰리');
+
+    useSessionStore.getState().addSession({
+      title: '고급 회식',
+      totalAmount: 15000000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id, charlie.id],
+      alcohol: {
+        unitPrice: 200000,
+        quantity: 5,
+        drinkerIds: [alice.id, bob.id],
+      },
+    });
+
+    const members = useMemberStore.getState().members;
+    const sessions = useSessionStore.getState().sessions;
+    const balances = calculateBalance(sessions, members);
+
+    let sum = new Big(0);
+    balances.forEach((b) => (sum = sum.plus(b)));
+    expect(Number(sum)).toBe(0);
+
+    // 10원 단위 절사 확인
+    const results = settle(sessions, members);
+    for (const r of results) {
+      for (const d of r.details) {
+        expect(d.baseAmount % 10).toBe(0);
+        expect(d.alcoholAmount % 10).toBe(0);
+      }
+    }
+
+    // 비음주자(찰리)는 술값 0
+    const charlieResult = results.find((r) => r.memberName === '찰리');
+    expect(charlieResult!.details[0].alcoholAmount).toBe(0);
   });
 });
