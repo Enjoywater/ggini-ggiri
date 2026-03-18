@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /detail
+
+Sitemap: https://ggini-ggiri.vercel.app/sitemap.xml

@@ -6,7 +6,7 @@ import type { Transfer } from '@/features/calculate';
 
 const APP_URL_BASE = typeof window !== 'undefined'
   ? window.location.origin
-  : 'https://ggini-ggiri.app';
+  : 'https://ggini-ggiri.vercel.app';
 
 interface CreateShareOptions {
   data: ShareableData;
