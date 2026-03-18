@@ -1,6 +1,6 @@
 'use client';
 
-import { type ButtonHTMLAttributes, forwardRef } from 'react';
+import { useState, useEffect, useRef, type ButtonHTMLAttributes, forwardRef } from 'react';
 
 interface ChipProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   selected?: boolean;
@@ -46,6 +46,19 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
     const styles = colorMap[color];
     const resolvedRole = role ?? 'switch';
 
+    const prevSelected = useRef(selected);
+    const [pulsing, setPulsing] = useState(false);
+
+    useEffect(() => {
+      if (selected && !prevSelected.current) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setPulsing(true);
+        const timer = setTimeout(() => setPulsing(false), 200);
+        return () => clearTimeout(timer);
+      }
+      prevSelected.current = selected;
+    }, [selected]);
+
     return (
       <button
         ref={ref}
@@ -57,10 +70,11 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
           relative inline-flex items-center gap-1.5 rounded-full border
           px-3 py-1.5 text-sm font-medium
           after:absolute after:inset-0 after:-m-[6px] after:content-[""]
-          transition-all duration-150 ease-in-out
+          transition-all duration-200 ease-in-out
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
           active:scale-95
           ${selected ? styles.active : styles.inactive}
+          ${pulsing ? 'animate-scale-pulse' : ''}
           ${className}
         `}
         {...props}

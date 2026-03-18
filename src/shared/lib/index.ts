@@ -20,3 +20,9 @@ export {
 } from './error-handler';
 export type { AppError, AppErrorCode } from './error-handler';
 export { useHydration } from './use-hydration';
+export { useReducedMotion } from './use-reduced-motion';
+export { useAnimatedNumber } from './use-animated-number';
+export { useNewItemIds } from './use-animate-list';
+export { useToastStore } from './toast-store';
+export { useToast } from './use-toast';
+export { navigateWithTransition } from './view-transition';

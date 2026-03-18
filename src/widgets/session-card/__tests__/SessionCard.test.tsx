@@ -260,3 +260,41 @@ describe('SessionCard - 술값 별도 정산', () => {
     expect(updated.alcohol!.drinkerIds).toHaveLength(3);
   });
 });
+
+// ── Alcohol animation ────────────────────────────────
+
+describe('SessionCard - 술값 애니메이션', () => {
+  it('술값 비활성화 시 gridTemplateRows가 0fr', () => {
+    setupMembers();
+    const session = createSession();
+    renderCard(session);
+
+    const gridContainer = document.querySelector('[style*="grid-template-rows"]') as HTMLElement;
+    if (gridContainer) {
+      expect(gridContainer.style.gridTemplateRows).toBe('0fr');
+    }
+  });
+
+  it('술값 활성화 시 gridTemplateRows가 1fr', () => {
+    setupMembers();
+    const session = createSession({
+      alcohol: { unitPrice: 5000, quantity: 3, drinkerIds: [] },
+    });
+    renderCard(session);
+
+    const gridContainer = document.querySelector('[style*="grid-template-rows"]') as HTMLElement;
+    if (gridContainer) {
+      expect(gridContainer.style.gridTemplateRows).toBe('1fr');
+    }
+  });
+
+  it('술값 영역에 aria-expanded 속성', () => {
+    setupMembers();
+    const session = createSession();
+    renderCard(session);
+
+    const expandable = document.querySelector('[aria-expanded]') as HTMLElement;
+    expect(expandable).toBeTruthy();
+    expect(expandable.getAttribute('aria-expanded')).toBe('false');
+  });
+});

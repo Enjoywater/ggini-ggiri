@@ -130,6 +130,59 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
+
+  /* Animation keyframes */
+  --animate-fade-up: fade-up 400ms ease-out both;
+  --animate-scale-pulse: scale-pulse 200ms ease-out;
+  --animate-breathing: breathing 3s ease-in-out infinite;
+  --animate-spring-in: spring-in 350ms ease-out both;
+  --animate-fade-out-up: fade-out-up 200ms ease-out forwards;
+  --animate-bounce-in: bounce-in 400ms ease-out both;
+  --animate-toast-in: toast-in 300ms ease-out both;
+  --animate-toast-out: toast-out 200ms ease-in both;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+  @keyframes breathing {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+  @keyframes spring-in {
+    0% { opacity: 0; transform: scale(0.9) translateY(4px); }
+    60% { opacity: 1; transform: scale(1.03); }
+    100% { transform: scale(1) translateY(0); }
+  }
+  @keyframes fade-out-up {
+    to { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  }
+  @keyframes bounce-in {
+    0% { opacity: 0; transform: scale(0.95); }
+    60% { opacity: 1; transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  @keyframes toast-in {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes toast-out {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(100%); opacity: 0; }
+  }
+  @keyframes stroke-draw {
+    from { stroke-dashoffset: 24; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes sparkle {
+    0% { transform: scale(0) translate(0, 0); opacity: 1; }
+    100% { transform: scale(1) translate(var(--sparkle-tx), var(--sparkle-ty)); opacity: 0; }
+  }
 }
 
 body {
@@ -148,4 +201,51 @@ body {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
+}
+
+/* --- Reduced motion: kill all motion --- */
+
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* --- View Transitions (Progressive Enhancement) --- */
+
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: 280ms ease-out both vt-slide-out-left;
+}
+::view-transition-new(root) {
+  animation: 280ms ease-out both vt-slide-in-right;
+}
+
+.slide-back::view-transition-old(root) {
+  animation: 280ms ease-out both vt-slide-out-right;
+}
+.slide-back::view-transition-new(root) {
+  animation: 280ms ease-out both vt-slide-in-left;
+}
+
+@keyframes vt-slide-out-left {
+  to { transform: translateX(-30%); opacity: 0; }
+}
+@keyframes vt-slide-in-right {
+  from { transform: translateX(30%); opacity: 0; }
+}
+@keyframes vt-slide-out-right {
+  to { transform: translateX(30%); opacity: 0; }
+}
+@keyframes vt-slide-in-left {
+  from { transform: translateX(-30%); opacity: 0; }
 }

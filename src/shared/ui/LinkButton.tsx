@@ -1,8 +1,11 @@
 'use client';
 
+import { useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ComponentProps } from 'react';
 import { type ButtonVariant, type ButtonSize, getButtonClassName } from './button-styles';
+import { navigateWithTransition } from '@/shared/lib/view-transition';
 
 interface LinkButtonProps extends Omit<ComponentProps<typeof Link>, 'className'> {
   variant?: ButtonVariant;
@@ -23,6 +26,25 @@ export function LinkButton({
   ...props
 }: LinkButtonProps) {
   const combinedClassName = getButtonClassName(variant, size, fullWidth, disabled, className);
+  const router = useRouter();
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) {
+        onClick?.(e);
+        return;
+      }
+
+      e.preventDefault();
+      onClick?.(e);
+
+      const href = typeof props.href === 'string' ? props.href : props.href.toString();
+      navigateWithTransition(href, () => {
+        router.push(href);
+      });
+    },
+    [onClick, props.href, router],
+  );
 
   if (disabled) {
     return (
@@ -39,7 +61,7 @@ export function LinkButton({
   }
 
   return (
-    <Link className={combinedClassName} onClick={onClick} {...props}>
+    <Link className={combinedClassName} onClick={handleClick} {...props}>
       {children}
     </Link>
   );

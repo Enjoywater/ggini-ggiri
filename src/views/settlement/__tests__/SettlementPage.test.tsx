@@ -325,3 +325,28 @@ describe('SettlementPage - 술값 분리 정산', () => {
     expect(bobResult!.totalAmount).toBeGreaterThan(0);
   });
 });
+
+// ── Animation ───────────────────────────────────────
+
+describe('SettlementPage - 애니메이션', () => {
+  it('정산 결과 제목에 animate-bounce-in 클래스', () => {
+    setupBasicSettlement();
+    render(<SettlementPage />);
+    const heading = screen.getByText('정산 결과');
+    expect(heading.className).toContain('animate-bounce-in');
+  });
+
+  it('빈 상태에 animate-breathing 클래스', () => {
+    render(<SettlementPage />);
+    const emptyText = screen.getByText('정산할 데이터가 없습니다.');
+    expect(emptyText.className).toContain('animate-breathing');
+  });
+
+  it('송금 완료 토글에 CheckAnimation 사용', () => {
+    setupBasicSettlement();
+    render(<SettlementPage />);
+    // CheckAnimation renders SVG-based check instead of emoji checkmarks
+    const svgs = document.querySelectorAll('svg');
+    expect(svgs.length).toBeGreaterThan(0);
+  });
+});

@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, Button } from '@/shared/ui';
-import { formatAmount } from '@/shared/lib/formatters';
+import { Card, Button, AnimatedAmount } from '@/shared/ui';
 import { useAccountStore } from '@/entities/account';
+import { useToast } from '@/shared/lib/use-toast';
 import type { SettlementResult as SettlementResultType } from '@/shared/types';
 
 interface SettlementResultProps {
@@ -13,15 +12,14 @@ interface SettlementResultProps {
 
 export function SettlementResult({ results, payerName }: SettlementResultProps) {
   const account = useAccountStore((s) => s.account);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const toast = useToast();
 
-  const handleCopyAccount = async (memberId: string) => {
+  const handleCopyAccount = async () => {
     if (!account) return;
     const text = `${account.bankName} ${account.accountNumber} ${account.ownerName}`;
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedId(memberId);
-      setTimeout(() => setCopiedId(null), 2000);
+      toast.success('계좌 정보가 복사되었습니다');
     } catch {
       alert('복사에 실패했습니다. 직접 계좌 정보를 확인해주세요.');
     }
@@ -34,18 +32,16 @@ export function SettlementResult({ results, payerName }: SettlementResultProps) 
       {/* 보낼 사람들 */}
       {positiveResults.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h3 className="text-base font-semibold text-text-secondary">
+          <h3 className="text-base font-semibold text-text-secondary animate-fade-up">
             개인별 정산 내역
           </h3>
-          {positiveResults.map((result) => (
-            <Card key={result.memberId} className="flex flex-col gap-3">
+          {positiveResults.map((result, index) => (
+            <Card key={result.memberId} className="flex flex-col gap-3 animate-fade-up" style={{ animationDelay: `${(index + 1) * 80}ms` }}>
               <div className="flex items-center justify-between">
                 <span className="text-base font-semibold text-text-primary">
                   {result.memberName}
                 </span>
-                <span className="text-lg font-bold text-primary-dark">
-                  {formatAmount(result.totalAmount)}
-                </span>
+                <AnimatedAmount amount={result.totalAmount} duration={400} className="text-lg font-bold text-primary-dark" />
               </div>
 
               {/* Session breakdown */}
@@ -74,12 +70,10 @@ export function SettlementResult({ results, payerName }: SettlementResultProps) 
                   variant="secondary"
                   size="sm"
                   fullWidth
-                  onClick={() => handleCopyAccount(result.memberId)}
+                  onClick={() => handleCopyAccount()}
                   aria-label={`${payerName} 계좌번호 복사`}
                 >
-                  {copiedId === result.memberId
-                    ? '복사 완료!'
-                    : `계좌 복사 (${account.bankName})`}
+                  {`계좌 복사 (${account.bankName})`}
                 </Button>
               )}
             </Card>

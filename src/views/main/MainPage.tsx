@@ -11,6 +11,7 @@ import { useHydration } from '@/shared/lib/use-hydration';
 import { PASTEL_COLORS } from '@/shared/lib';
 import { formatAmount } from '@/shared/lib/formatters';
 import { SessionCard } from '@/widgets/session-card';
+import { useNewItemIds } from '@/shared/lib/use-animate-list';
 
 export function MainPage() {
   const hydrated = useHydration();
@@ -205,6 +206,9 @@ export function MainPage() {
     });
   };
 
+  const newMemberIds = useNewItemIds(members);
+  const newSessionIds = useNewItemIds(sessions);
+
   const canCalculate = sessions.length > 0 && members.length >= 2;
   const hasZeroAmountSession = sessions.some((s) => s.totalAmount === 0);
 
@@ -279,7 +283,11 @@ export function MainPage() {
                   aria-label="참여자 이름 수정"
                 />
               ) : (
-                <div key={member.id} className="inline-flex items-center">
+                <div
+                  key={member.id}
+                  className={`inline-flex items-center ${newMemberIds.has(member.id) ? 'animate-spring-in' : ''}`}
+                  style={newMemberIds.has(member.id) ? { animationDelay: `${i * 50}ms` } : undefined}
+                >
                   <Chip
                     selected
                     color={PASTEL_COLORS[i % PASTEL_COLORS.length]}
@@ -309,7 +317,7 @@ export function MainPage() {
         )}
 
         {members.length === 0 && (
-          <p className="text-sm text-text-muted text-center py-4">
+          <p className="text-sm text-text-muted text-center py-4 animate-breathing">
             모임 참여자를 추가해 주세요
           </p>
         )}
@@ -375,7 +383,7 @@ export function MainPage() {
 
         {sessions.length === 0 && (
           <Card className="text-center py-8">
-            <p className="text-text-muted">
+            <p className="text-text-muted animate-breathing">
               {members.length === 0
                 ? '먼저 참여자를 추가해 주세요'
                 : '+ 추가 버튼으로 N차를 추가하세요'}
@@ -384,13 +392,18 @@ export function MainPage() {
         )}
 
         {sessions.map((session, i) => (
-          <SessionCard
+          <div
             key={session.id}
-            session={session}
-            index={i}
-            onRemove={handleRemoveSession}
-            onDuplicate={duplicateSession}
-          />
+            className={newSessionIds.has(session.id) ? 'animate-spring-in' : ''}
+            style={newSessionIds.has(session.id) ? { animationDelay: `${i * 80}ms` } : undefined}
+          >
+            <SessionCard
+              session={session}
+              index={i}
+              onRemove={handleRemoveSession}
+              onDuplicate={duplicateSession}
+            />
+          </div>
         ))}
       </div>
 

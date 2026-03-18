@@ -242,7 +242,7 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
         </div>
 
         {/* Alcohol Switch */}
-        <div className="border-t border-border pt-4">
+        <div className="border-t border-border pt-4" aria-expanded={alcoholEnabled}>
           <Switch
             checked={alcoholEnabled}
             onChange={handleAlcoholToggle}
@@ -250,81 +250,88 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
           />
         </div>
 
-        {/* Alcohol Detail */}
-        {alcoholEnabled && session.alcohol && (
-          <div className="flex flex-col gap-3 rounded-xl bg-pastel-peach/30 p-3">
-            <div className="grid grid-cols-2 gap-3">
-              <FormField error={unitPriceError}>
-                <Input
-                  label="주류 단가"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  suffix="원"
-                  value={formatAmount(session.alcohol.unitPrice)}
-                  onChange={(e) => handleAlcoholUnitPrice(e.target.value)}
-                  onBlur={handleUnitPriceBlur}
-                />
-              </FormField>
-              <FormField error={quantityError}>
-                <Input
-                  label="수량"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  suffix="병"
-                  value={session.alcohol.quantity > 0 ? String(session.alcohol.quantity) : ''}
-                  onChange={(e) => handleAlcoholQuantity(e.target.value)}
-                  onBlur={handleQuantityBlur}
-                />
-              </FormField>
-            </div>
+        {/* Alcohol Detail — animated fold/unfold */}
+        <div
+          className="grid transition-[grid-template-rows] duration-300 ease-out"
+          style={{ gridTemplateRows: alcoholEnabled ? '1fr' : '0fr' }}
+        >
+          <div className="overflow-hidden">
+            {(alcoholEnabled || session.alcohol) && (
+              <div className="flex flex-col gap-3 rounded-xl bg-pastel-peach/30 p-3 mt-0">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField error={unitPriceError}>
+                    <Input
+                      label="주류 단가"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      suffix="원"
+                      value={formatAmount(session.alcohol?.unitPrice ?? 0)}
+                      onChange={(e) => handleAlcoholUnitPrice(e.target.value)}
+                      onBlur={handleUnitPriceBlur}
+                    />
+                  </FormField>
+                  <FormField error={quantityError}>
+                    <Input
+                      label="수량"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      suffix="병"
+                      value={session.alcohol && session.alcohol.quantity > 0 ? String(session.alcohol.quantity) : ''}
+                      onChange={(e) => handleAlcoholQuantity(e.target.value)}
+                      onBlur={handleQuantityBlur}
+                    />
+                  </FormField>
+                </div>
 
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-text-secondary">음주자</span>
-                <button
-                  type="button"
-                  className="text-xs text-primary-dark hover:underline"
-                  onClick={handleToggleAllDrinkers}
-                  aria-label={
-                    members.filter((m) => session.participantIds.includes(m.id)).every((m) => session.alcohol!.drinkerIds.includes(m.id))
-                      ? '음주자 전체 해제'
-                      : '음주자 전체 선택'
-                  }
-                >
-                  {members.filter((m) => session.participantIds.includes(m.id)).every((m) => session.alcohol!.drinkerIds.includes(m.id))
-                    ? '전체 해제'
-                    : '전체 선택'}
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {members
-                  .filter((m) => session.participantIds.includes(m.id))
-                  .map((member, i) => (
-                    <Chip
-                      key={member.id}
-                      selected={session.alcohol!.drinkerIds.includes(member.id)}
-                      color={PASTEL_COLORS[i % PASTEL_COLORS.length]}
-                      onClick={() => handleDrinkerToggle(member.id)}
-                      aria-label={`${member.name} 음주 여부 토글`}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-text-secondary">음주자</span>
+                    <button
+                      type="button"
+                      className="text-xs text-primary-dark hover:underline"
+                      onClick={handleToggleAllDrinkers}
+                      aria-label={
+                        members.filter((m) => session.participantIds.includes(m.id)).every((m) => session.alcohol!.drinkerIds.includes(m.id))
+                          ? '음주자 전체 해제'
+                          : '음주자 전체 선택'
+                      }
                     >
-                      {member.name}
-                    </Chip>
-                  ))}
-              </div>
-            </div>
+                      {members.filter((m) => session.participantIds.includes(m.id)).every((m) => session.alcohol!.drinkerIds.includes(m.id))
+                        ? '전체 해제'
+                        : '전체 선택'}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {members
+                      .filter((m) => session.participantIds.includes(m.id))
+                      .map((member, i) => (
+                        <Chip
+                          key={member.id}
+                          selected={session.alcohol!.drinkerIds.includes(member.id)}
+                          color={PASTEL_COLORS[i % PASTEL_COLORS.length]}
+                          onClick={() => handleDrinkerToggle(member.id)}
+                          aria-label={`${member.name} 음주 여부 토글`}
+                        >
+                          {member.name}
+                        </Chip>
+                      ))}
+                  </div>
+                </div>
 
-            {(() => {
-              const alcoholTotal = session.alcohol!.unitPrice * session.alcohol!.quantity;
-              return alcoholTotal > 0 && session.totalAmount > 0 && alcoholTotal > session.totalAmount ? (
-                <p className="text-xs text-warning-dark">
-                  주류 합계({alcoholTotal.toLocaleString('ko-KR')}원)가 총 금액({session.totalAmount.toLocaleString('ko-KR')}원)을 초과합니다.
-                </p>
-              ) : null;
-            })()}
+                {(() => {
+                  const alcoholTotal = (session.alcohol?.unitPrice ?? 0) * (session.alcohol?.quantity ?? 0);
+                  return alcoholTotal > 0 && session.totalAmount > 0 && alcoholTotal > session.totalAmount ? (
+                    <p className="text-xs text-warning-dark">
+                      주류 합계({alcoholTotal.toLocaleString('ko-KR')}원)가 총 금액({session.totalAmount.toLocaleString('ko-KR')}원)을 초과합니다.
+                    </p>
+                  ) : null;
+                })()}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </Card>
   );

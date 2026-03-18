@@ -460,3 +460,13 @@ describe('HistoryPage - 다수 아이템', () => {
     expect(cards).toHaveLength(10);
   });
 });
+
+// ── Animation ───────────────────────────────────────
+
+describe('HistoryPage - 애니메이션', () => {
+  it('빈 기록에 animate-breathing 클래스', () => {
+    render(<HistoryPage />);
+    const emptyText = screen.getByText('아직 정산 기록이 없습니다');
+    expect(emptyText.className).toContain('animate-breathing');
+  });
+});

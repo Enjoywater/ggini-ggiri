@@ -61,4 +61,36 @@ describe('Chip', () => {
     const chip = screen.getByRole('switch');
     expect(chip.className).toContain('bg-pastel-peach');
   });
+
+  describe('Chip 애니메이션', () => {
+    it('duration-200 트랜지션 클래스 적용', () => {
+      render(<Chip>test</Chip>);
+      const button = screen.getByRole('switch');
+      expect(button.className).toContain('duration-200');
+    });
+
+    it('선택 전환 시 animate-scale-pulse 클래스 일시 적용', async () => {
+      vi.useFakeTimers();
+      const { rerender } = render(<Chip selected={false}>test</Chip>);
+      const button = screen.getByRole('switch');
+
+      // Transition to selected
+      rerender(<Chip selected={true}>test</Chip>);
+      expect(button.className).toContain('animate-scale-pulse');
+
+      // After 200ms, pulse class should be removed
+      vi.advanceTimersByTime(200);
+      rerender(<Chip selected={true}>test</Chip>); // trigger re-render
+      expect(button.className).not.toContain('animate-scale-pulse');
+
+      vi.useRealTimers();
+    });
+
+    it('선택 해제 시 animate-scale-pulse 미적용', () => {
+      const { rerender } = render(<Chip selected={true}>test</Chip>);
+      rerender(<Chip selected={false}>test</Chip>);
+      const button = screen.getByRole('switch');
+      expect(button.className).not.toContain('animate-scale-pulse');
+    });
+  });
 });

@@ -3,6 +3,7 @@ import { Geist } from 'next/font/google';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { ServiceWorkerRegistrar } from '@/shared/ui/ServiceWorkerRegistrar';
 import { ThemeProvider } from '@/entities/theme';
+import { ToastContainer } from '@/shared/ui/ToastContainer';
 import './globals.css';
 
 const geistSans = Geist({
@@ -108,6 +109,7 @@ export default function RootLayout({
         className={`${geistSans.variable} font-sans antialiased bg-background text-foreground`}
       >
         <ThemeProvider />
+        <ToastContainer />
         <ServiceWorkerRegistrar />
         <ErrorBoundary>
           <div className="mx-auto min-h-dvh w-full max-w-md px-5 pt-12 pb-8">

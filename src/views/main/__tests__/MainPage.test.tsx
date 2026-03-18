@@ -459,3 +459,21 @@ describe('MainPage - 프리셋 관리', () => {
     expect(screen.getByText('3인방 (3명)')).toBeInTheDocument();
   });
 });
+
+// ── Animation ───────────────────────────────────────
+
+describe('MainPage - 애니메이션', () => {
+  it('참여자 빈 상태에 animate-breathing 클래스', () => {
+    render(<MainPage />);
+    const emptyText = screen.getByText('모임 참여자를 추가해 주세요');
+    expect(emptyText.className).toContain('animate-breathing');
+  });
+
+  it('세션 빈 상태에 animate-breathing 클래스', () => {
+    useMemberStore.getState().addMember('앨리스');
+    useMemberStore.getState().addMember('밥');
+    render(<MainPage />);
+    const emptyText = screen.getByText('+ 추가 버튼으로 N차를 추가하세요');
+    expect(emptyText.className).toContain('animate-breathing');
+  });
+});

@@ -105,7 +105,7 @@ export function HistoryPage() {
       {/* History List */}
       {histories.length === 0 ? (
         <Card className="text-center py-8">
-          <p className="text-text-muted">아직 정산 기록이 없습니다</p>
+          <p className="text-text-muted animate-breathing">아직 정산 기록이 없습니다</p>
         </Card>
       ) : (
         <div className="flex flex-col gap-3">

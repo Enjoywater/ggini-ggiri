@@ -154,6 +154,40 @@ describe('SettlementResult', () => {
     expect(writeTextMock).toHaveBeenCalledWith(
       '카카오뱅크 3333-01-1234567 앨리스',
     );
-    expect(buttons[0]).toHaveTextContent('복사 완료!');
+    // 복사 완료 피드백은 토스트 시스템으로 이동됨
+    expect(buttons[0]).toHaveTextContent('계좌 복사 (카카오뱅크)');
+  });
+
+  it('계좌 복사 시 토스트 표시', async () => {
+    const { useToastStore } = await import('@/shared/lib/toast-store');
+    const user = userEvent.setup();
+
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      configurable: true,
+    });
+    useAccountStore.getState().setAccount({
+      bankName: '카카오뱅크',
+      accountNumber: '3333-01-1234567',
+      ownerName: '앨리스',
+    });
+
+    render(<SettlementResult results={mockResults} payerName="앨리스" />);
+    const buttons = screen.getAllByRole('button', { name: /계좌번호 복사/ });
+    await user.click(buttons[0]);
+
+    // Verify toast was added
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts.length).toBeGreaterThan(0);
+    expect(toasts[0].message).toContain('복사');
+    expect(toasts[0].type).toBe('success');
+  });
+
+  it('개인별 정산 카드에 animate-fade-up 클래스 적용', () => {
+    render(<SettlementResult results={mockResults} payerName="앨리스" />);
+    // Find Card elements - they should have animate-fade-up class
+    const cards = document.querySelectorAll('.animate-fade-up');
+    expect(cards.length).toBeGreaterThan(0);
   });
 });

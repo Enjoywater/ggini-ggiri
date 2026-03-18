@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, LinkButton } from '@/shared/ui';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Button, LinkButton, CheckAnimation } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
 import { useHistoryStore } from '@/entities/history';
 import { useTransferCompletionStore, getTransferKey } from '@/entities/transfer-completion';
 import { useHydration } from '@/shared/lib/use-hydration';
+import { useToast } from '@/shared/lib/use-toast';
 import { findMainPayer, formatAmount } from '@/shared/lib/formatters';
 import { settle, calculateBalance, optimizeTransfers } from '@/features/calculate';
 import { ShareButton } from '@/features/share';
@@ -21,7 +22,7 @@ export function SettlementPage() {
   const members = useMemberStore((s) => s.members);
   const sessions = useSessionStore((s) => s.sessions);
   const account = useAccountStore((s) => s.account);
-  const [textShareStatus, setTextShareStatus] = useState<string | null>(null);
+  const toast = useToast();
   const completions = useTransferCompletionStore((s) => s.completions);
   const toggleCompletion = useTransferCompletionStore((s) => s.toggleCompletion);
   const resetCompletions = useTransferCompletionStore((s) => s.reset);
@@ -97,7 +98,6 @@ export function SettlementPage() {
   }, [results, transfers, members, sessions, totalAmount, fingerprint]);
 
   const handleTextShare = useCallback(async () => {
-    setTextShareStatus(null);
     try {
       const text = buildSettlementText({
         transfers,
@@ -108,12 +108,11 @@ export function SettlementPage() {
         results,
       });
       const result = await shareText(text);
-      setTextShareStatus(result === 'copied' ? '클립보드에 복사되었습니다!' : '공유 완료!');
-      setTimeout(() => setTextShareStatus(null), 2000);
+      toast.success(result === 'copied' ? '클립보드에 복사되었습니다!' : '공유 완료!');
     } catch {
       // 사용자가 공유를 취소한 경우
     }
-  }, [transfers, members, account, totalAmount, sessions, results]);
+  }, [transfers, members, account, totalAmount, sessions, results, toast]);
 
   if (!hydrated) {
     return (
@@ -126,7 +125,7 @@ export function SettlementPage() {
   if (sessions.length === 0 || members.length < 2) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4">
-        <p className="text-sm text-text-muted">정산할 데이터가 없습니다.</p>
+        <p className="text-sm text-text-muted animate-breathing">정산할 데이터가 없습니다.</p>
         <LinkButton href="/" variant="secondary" size="sm">메인으로 이동</LinkButton>
       </div>
     );
@@ -139,7 +138,7 @@ export function SettlementPage() {
         <LinkButton href="/" aria-label="뒤로 가기" variant="ghost" size="sm">
           &larr;
         </LinkButton>
-        <h1 className="text-xl font-bold text-text-primary">정산 결과</h1>
+        <h1 className="text-xl font-bold text-text-primary animate-bounce-in">정산 결과</h1>
       </div>
 
       {/* Transfer Summary */}
@@ -153,7 +152,7 @@ export function SettlementPage() {
         return (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-text-secondary">
+              <h2 className="text-base font-semibold text-text-secondary animate-fade-up">
                 송금 요약
               </h2>
               <div className="flex items-center gap-2">
@@ -167,7 +166,7 @@ export function SettlementPage() {
                 )}
               </div>
             </div>
-            {transfers.map((t) => {
+            {transfers.map((t, index) => {
               const key = getTransferKey(t.from, t.to, t.amount);
               const completed = !!completions[key];
               const fromMember = members.find((m) => m.id === t.from);
@@ -178,20 +177,19 @@ export function SettlementPage() {
                   type="button"
                   onClick={() => toggleCompletion(key)}
                   aria-label={`${fromMember?.name} → ${toMember?.name} ${formatAmount(t.amount)} 송금 완료 토글`}
-                  className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
+                  className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors animate-fade-up ${
                     completed
                       ? 'bg-pastel-mint/30'
                       : 'bg-pastel-sky/30'
                   }`}
+                  style={{ animationDelay: `${index * 80}ms` }}
                 >
                   <span
                     className={`text-base text-text-primary ${
                       completed ? 'line-through opacity-60' : ''
                     }`}
                   >
-                    <span className="mr-2 inline-block w-5 text-center">
-                      {completed ? '\u2705' : '\u2B1C'}
-                    </span>
+                    <CheckAnimation checked={completed} className="mr-1" />
                     <strong>{fromMember?.name}</strong>
                     {' \u2192 '}
                     <strong>{toMember?.name}</strong>
@@ -245,7 +243,7 @@ export function SettlementPage() {
           onClick={handleTextShare}
           aria-label="정산 결과 텍스트 복사"
         >
-          {textShareStatus ?? '텍스트로 공유/복사'}
+          텍스트로 공유/복사
         </Button>
       </div>
 

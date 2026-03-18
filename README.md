@@ -119,7 +119,7 @@ Vercel에 배포 중이며, 환경변수 설정이 필요합니다:
 - 스타일: Tailwind CSS v4
 - UI: LinkButton (공유 스타일), Modal (useId, X 닫기, dvh 스크롤), Chip (role 분리)
 - PWA: manifest.json + Service Worker
-- 테스트: Vitest (571 tests, 39 files)
+- 테스트: Vitest (645 tests, 48 files)
 
 ## 6) 아키텍처
 
@@ -159,14 +159,14 @@ src/
 
 ## 8) 테스트 범위
 
-현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 571개 테스트, 39개 파일)
+현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 645개 테스트, 48개 파일)
 
 - 정산 엔진 (`settlement-engine`, edge cases, settle/calculateBalance 정합성)
 - 공유/직렬화 (`text-share` 세션별 내역 포함, `serializer`)
 - 스토어 무결성 (`store-integrity`, `history-store`, `preset-store`)
 - 세션 복제 동작 (`session-duplication`)
 - UI 상태 동기화 (`alcohol-sync`)
-- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`, `FormField`)
+- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`, `FormField`, `AnimatedAmount`, `CheckAnimation`, `ToastContainer`)
 - Export/Import (`validate`, `export`, `import`, `ExportImportButtons` — 스키마 검증, 보안 필터링, UI)
 - 접근성 (`accessibility` — ARIA 속성, 포커스 트랩, 키보드 네비게이션)
 - 유효성 검증 (`validators` — 계좌번호, 금액, 멤버명, 주류 수량/단가)
@@ -179,12 +179,75 @@ src/
 - 위젯 테스트 (`SessionCard` — 렌더링, 결제자/참여자 토글, 전체 선택/해제, 술값 스위치, 음주자 관리)
 - E2E 유저 저니 (`e2e-journey` — 2인 정산, 5인 MT 술값 분리, 프리셋→정산→히스토리, 멤버 삭제 연쇄, 전체 초기화, 직장인 회식, 세션 복제, 엣지 케이스)
 - 송금 완료 스토어 (`transfer-completion` — toggle, reset, persist, 키 생성)
+- 애니메이션 훅 (`use-reduced-motion`, `use-animated-number`, `use-animate-list` — 모션 감지, rAF 보간, 리스트 추가 감지)
+- 토스트 시스템 (`toast-store`, `use-toast`, `ToastContainer` — 추가/제거/자동만료, 접근성, Portal 렌더링)
+- 네비게이션 (`view-transition` — 페이지 depth, slide-back, API fallback)
 
 ## 9) 개발 메모
 
 - 계좌 예금주가 참여자 목록에 없으면 메인 화면 진입 시 자동 추가됩니다.
 - 정산 페이지 진입 시 결과가 히스토리에 자동 저장됩니다(중복 저장 방지 처리 포함).
 - 히스토리는 최대 50개까지 보관됩니다.
+
+---
+
+## TODO PLAN: UX/UI 디자인 개선
+
+디자인 세션(DL + D1~D3)에서 도출된 개선 사항. A/B/C는 서로 독립적으로 병렬 진행 가능.
+
+### Plan A: 애니메이션 시스템
+
+공통 원칙: 모든 모션은 `motion-safe:` 가드 필수, 800ms 룰(단일 시퀀스 총 시간 ≤ 800ms), Progressive Enhancement.
+
+**Phase 0 — 공통 인프라 (선행 필수)**
+- [x] `shared/lib/use-reduced-motion.ts` — `prefers-reduced-motion` 감지 훅
+- [x] `globals.css` — `@media (prefers-reduced-motion: reduce)` 전역 가드 + `@keyframes` 9종 정의
+
+**Phase 1 — CSS-only (병렬 가능)**
+- [x] A-9: 빈 상태 숨쉬기 — `scale 1↔1.02`, infinite, 3s (MainPage, HistoryPage)
+- [x] A-4: Chip 토글 피드백 — `scale-pulse` + `motion-safe:duration-200` (Chip.tsx)
+- [x] A-3: 술값 접기/펼치기 — `grid-template-rows: 0fr→1fr`, 300ms ease-out (SessionCard.tsx)
+
+**Phase 2 — 훅 기반**
+- [x] A-8: 금액 카운트업 — `useAnimatedNumber` 훅 + `AnimatedAmount` 컴포넌트, 150ms rAF 보간
+- [x] A-5: 멤버/세션 추가삭제 — `useAnimateList` 훅, staggered spring-in + fade-out + layout shift
+
+**Phase 3 — 통합 시스템**
+- [x] A-2: 정산 결과 진입 시퀀스 — staggered fade-up (index × 80ms) + 금액 카운트업 + 타이틀 bounce
+- [x] A-7: 토스트 시스템 — Zustand store + `createPortal`, slide-up → 2s 유지 → fade-out
+- [x] A-6: 송금 완료 체크 — SVG `stroke-dasharray` 드로잉 300ms + CSS 스파클 파티클 200ms
+
+**Phase 4 — 페이지 전환**
+- [x] A-1: View Transitions API — `TransitionLink` 컴포넌트, 페이지 depth 맵 기반 슬라이드 방향 결정
+
+> 신규 9개 / 수정 10개 파일 | 외부 라이브러리 없음 (~3KB gzipped)
+
+### Plan B: UX 개선
+
+**Phase 1 — 기반 인프라 (병렬 가능)**
+- [x] B-4: 글로벌 토스트 — `Toast.tsx`, `ToastContainer.tsx`, `toast-store.ts`, `use-toast.ts` (A-7에서 구현 완료)
+- [ ] B-3: EmptyState 컴포넌트 — `EmptyState.tsx` + SVG 일러스트 3종 (`currentColor` 기반 다크모드 자동 대응)
+
+**Phase 2 — 독립 기능 (병렬 가능)**
+- [ ] B-1: Sticky 정산하기 버튼 — `StickyBottomBar.tsx` + `useScrollShadow` 훅, `backdrop-blur-sm`, `safe-area-inset-bottom`
+- [ ] B-2: 빠른 금액 버튼 — `features/quick-amount/`, `+1천`/`+5천`/`+1만` Chip → `onAmountChange(current + preset)`
+- [ ] B-3': 빈 상태 적용 — 상황별 맞춤 메시지 + CTA 유도 (MainPage, HistoryPage 등)
+
+**Phase 3 — 통합 기능**
+- [ ] B-5: 인라인 온보딩 — `entities/onboarding/` + `features/inline-onboarding/`, 4단계 자동 진행, Zustand persist, `completionCondition` 자동 감지
+
+> 신규 15개 / 수정 11개 파일
+
+### Plan C: 비주얼 개선
+
+독립 구현 가능, 우선순위 순:
+
+- [ ] C-4: 주류 섹션 시각 구분 — `bg-pastel-peach/30` → `bg-pastel-lavender/20` + border + 🍺 레이블, `role="region"` (SessionCard.tsx)
+- [ ] C-1: 세션 카드 컬러 스트라이프 — Card에 `accentColor` prop + `border-l-4` 파스텔 회전색 + "1차" 차수 배지 (Card.tsx, SessionCard.tsx)
+- [ ] C-3: 공유 섹션 강조 — `<section>` + `bg-gradient-to-br from-primary/20 to-secondary/20` + 아이콘 추가 (SettlementPage.tsx, ShareButton.tsx)
+- [ ] C-2: 정산 카드 멤버 컬러 — `members` prop 추가 + `tintMap`으로 `bg-pastel-{color}/10` 배경 + 색상 도트 (SettlementResult.tsx, SettlementPage.tsx)
+
+> 수정 6개 파일 | 신규 파일 없음 | 다크 모드 자동 대응 (CSS 변수 기반)
 
 ---
 
