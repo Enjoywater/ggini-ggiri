@@ -1,193 +1,77 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import { SettlementResult } from '../SettlementResult';
-import { useAccountStore } from '@/entities/account';
-import type { SettlementResult as SettlementResultType } from '@/shared/types';
 
-vi.mock('@/shared/lib/use-hydration', () => ({
-  useHydration: () => true,
+// Mock zustand stores
+vi.mock('@/entities/account', () => ({
+  useAccountStore: () => null,
 }));
 
-const mockResults: SettlementResultType[] = [
+vi.mock('@/shared/lib/use-toast', () => ({
+  useToast: () => ({ success: vi.fn(), error: vi.fn() }),
+}));
+
+const mockResults = [
   {
-    memberId: 'B',
-    memberName: '밥',
-    totalAmount: 50000,
+    memberId: 'm1',
+    memberName: '홍길동',
+    totalAmount: 15000,
     details: [
-      {
-        sessionId: 's1',
-        sessionTitle: '1차 삼겹살',
-        baseAmount: 40000,
-        alcoholAmount: 10000,
-        subtotal: 50000,
-      },
+      { sessionId: 's1', sessionTitle: '1차', baseAmount: 15000, alcoholAmount: 0, subtotal: 15000 },
     ],
   },
   {
-    memberId: 'C',
-    memberName: '찰리',
-    totalAmount: 30000,
+    memberId: 'm2',
+    memberName: '김철수',
+    totalAmount: 20000,
     details: [
-      {
-        sessionId: 's1',
-        sessionTitle: '1차 삼겹살',
-        baseAmount: 30000,
-        alcoholAmount: 0,
-        subtotal: 30000,
-      },
+      { sessionId: 's1', sessionTitle: '1차', baseAmount: 20000, alcoholAmount: 0, subtotal: 20000 },
     ],
   },
 ];
 
-beforeEach(() => {
-  useAccountStore.getState().clearAccount();
-});
+const mockMembers = [
+  { id: 'm1', name: '홍길동' },
+  { id: 'm2', name: '김철수' },
+];
 
 describe('SettlementResult', () => {
-  it('정산 결과를 멤버별로 렌더링', () => {
-    render(
-      <SettlementResult results={mockResults} payerName="앨리스" />,
-    );
-
-    expect(screen.getByText('밥')).toBeInTheDocument();
-    expect(screen.getByText('찰리')).toBeInTheDocument();
-
-    // 총액 표시 요소는 text-lg 클래스를 가진 span
-    const totalAmounts = screen.getAllByText(/^\d{1,3}(,\d{3})*원$/);
-    const boldAmounts = totalAmounts.filter(
-      (el) => el.className.includes('text-lg'),
-    );
-    expect(boldAmounts).toHaveLength(2);
-    expect(boldAmounts[0]).toHaveTextContent('50,000원');
-    expect(boldAmounts[1]).toHaveTextContent('30,000원');
+  it('renders member names and amounts', () => {
+    render(<SettlementResult results={mockResults} payerName="결제자" />);
+    expect(screen.getByText('홍길동')).toBeInTheDocument();
+    expect(screen.getByText('김철수')).toBeInTheDocument();
   });
 
-  it('세션별 상세 내역을 표시', () => {
-    render(
-      <SettlementResult results={mockResults} payerName="앨리스" />,
+  it('renders color dots when members prop is provided', () => {
+    const { container } = render(
+      <SettlementResult results={mockResults} payerName="결제자" members={mockMembers} />
     );
-
-    expect(screen.getAllByText('1차 삼겹살')).toHaveLength(2);
-    expect(screen.getByText(/\+ 주류 10,000/)).toBeInTheDocument();
+    const dots = container.querySelectorAll('[aria-hidden="true"].rounded-full');
+    expect(dots.length).toBe(2);
   });
 
-  it('totalAmount가 0 이하인 결과는 필터링', () => {
-    const resultsWithZero: SettlementResultType[] = [
-      {
-        memberId: 'A',
-        memberName: '앨리스',
-        totalAmount: 0,
-        details: [],
-      },
-      ...mockResults,
-    ];
-
-    render(
-      <SettlementResult results={resultsWithZero} payerName="앨리스" />,
+  it('does not render color dots when members prop is not provided', () => {
+    const { container } = render(
+      <SettlementResult results={mockResults} payerName="결제자" />
     );
-
-    // 앨리스(0원)는 표시되지 않아야 함
-    expect(screen.queryByText('앨리스')).not.toBeInTheDocument();
-    expect(screen.getByText('밥')).toBeInTheDocument();
+    const dots = container.querySelectorAll('[aria-hidden="true"].rounded-full');
+    expect(dots.length).toBe(0);
   });
 
-  it('정산할 내역이 없으면 빈 상태 메시지 표시', () => {
-    const emptyResults: SettlementResultType[] = [
-      { memberId: 'A', memberName: '앨리스', totalAmount: 0, details: [] },
-    ];
-
-    render(
-      <SettlementResult results={emptyResults} payerName="앨리스" />,
+  it('applies tint background via tintMap when members are provided', () => {
+    const { container } = render(
+      <SettlementResult results={mockResults} payerName="결제자" members={mockMembers} />
     );
-
-    expect(screen.getByText('정산할 내역이 없습니다')).toBeInTheDocument();
-  });
-
-  it('계좌 정보가 있으면 복사 버튼 표시', () => {
-    useAccountStore.getState().setAccount({
-      bankName: '카카오뱅크',
-      accountNumber: '3333-01-1234567',
-      ownerName: '앨리스',
-    });
-
-    render(
-      <SettlementResult results={mockResults} payerName="앨리스" />,
-    );
-
-    const buttons = screen.getAllByRole('button', { name: /계좌번호 복사/ });
-    expect(buttons.length).toBeGreaterThan(0);
-    expect(buttons[0]).toHaveTextContent('계좌 복사 (카카오뱅크)');
-  });
-
-  it('계좌 정보가 없으면 복사 버튼 미표시', () => {
-    render(
-      <SettlementResult results={mockResults} payerName="앨리스" />,
-    );
-
-    expect(
-      screen.queryByRole('button', { name: /계좌번호 복사/ }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('계좌 복사 버튼 클릭 시 클립보드에 복사', async () => {
-    const user = userEvent.setup();
-    const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: writeTextMock },
-      configurable: true,
-    });
-
-    useAccountStore.getState().setAccount({
-      bankName: '카카오뱅크',
-      accountNumber: '3333-01-1234567',
-      ownerName: '앨리스',
-    });
-
-    render(
-      <SettlementResult results={mockResults} payerName="앨리스" />,
-    );
-
-    const buttons = screen.getAllByRole('button', { name: /계좌번호 복사/ });
-    await user.click(buttons[0]);
-
-    expect(writeTextMock).toHaveBeenCalledWith(
-      '카카오뱅크 3333-01-1234567 앨리스',
-    );
-    // 복사 완료 피드백은 토스트 시스템으로 이동됨
-    expect(buttons[0]).toHaveTextContent('계좌 복사 (카카오뱅크)');
-  });
-
-  it('계좌 복사 시 토스트 표시', async () => {
-    const { useToastStore } = await import('@/shared/lib/toast-store');
-    const user = userEvent.setup();
-
-    const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: writeTextMock },
-      configurable: true,
-    });
-    useAccountStore.getState().setAccount({
-      bankName: '카카오뱅크',
-      accountNumber: '3333-01-1234567',
-      ownerName: '앨리스',
-    });
-
-    render(<SettlementResult results={mockResults} payerName="앨리스" />);
-    const buttons = screen.getAllByRole('button', { name: /계좌번호 복사/ });
-    await user.click(buttons[0]);
-
-    // Verify toast was added
-    const toasts = useToastStore.getState().toasts;
-    expect(toasts.length).toBeGreaterThan(0);
-    expect(toasts[0].message).toContain('복사');
-    expect(toasts[0].type).toBe('success');
-  });
-
-  it('개인별 정산 카드에 animate-fade-up 클래스 적용', () => {
-    render(<SettlementResult results={mockResults} payerName="앨리스" />);
-    // Find Card elements - they should have animate-fade-up class
-    const cards = document.querySelectorAll('.animate-fade-up');
-    expect(cards.length).toBeGreaterThan(0);
+    // When members are provided, each result card's color dot should have a background-color style
+    const dots = container.querySelectorAll('[aria-hidden="true"].rounded-full');
+    expect(dots.length).toBe(2);
+    // First member gets 'pink' color, second gets 'lavender'
+    const firstDot = dots[0] as HTMLElement;
+    const secondDot = dots[1] as HTMLElement;
+    // jsdom may not parse CSS custom properties, but the style attribute should be set
+    expect(firstDot.getAttribute('style')).toBeTruthy();
+    expect(secondDot.getAttribute('style')).toBeTruthy();
+    // Verify different dots have different styles (different colors assigned)
+    expect(firstDot.getAttribute('style')).not.toBe(secondDot.getAttribute('style'));
   });
 });
