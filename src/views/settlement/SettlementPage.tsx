@@ -249,7 +249,8 @@ export function SettlementPage() {
       )}
 
       {/* Share */}
-      <div className="flex flex-col gap-2">
+      <section className="rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 p-5 flex flex-col gap-3">
+        <h2 className="text-base font-semibold text-text-primary">공유하기</h2>
         <ShareButton
           data={{ members, sessions, settlement: results, transfers: transfers.map((t) => ({ from: t.from, to: t.to, amount: t.amount })) }}
           transfers={transfers}
@@ -264,9 +265,14 @@ export function SettlementPage() {
           onClick={handleTextShare}
           aria-label="정산 결과 텍스트 복사"
         >
-          텍스트로 공유/복사
+          <span className="inline-flex items-center gap-2">
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+              <path d="M4 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4zm1 3h6v1H5V5zm0 2.5h6v1H5v-1zm0 2.5h4v1H5V10z" fill="currentColor"/>
+            </svg>
+            텍스트로 공유/복사
+          </span>
         </Button>
-      </div>
+      </section>
 
       {/* Back to main */}
       <LinkButton href="/" variant="ghost" fullWidth>
