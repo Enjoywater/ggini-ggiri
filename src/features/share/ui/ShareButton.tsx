@@ -52,7 +52,12 @@ export function ShareButton({ data, transfers, members, account, totalLabel }: S
         disabled={sending}
         className="w-full rounded-xl bg-[#FEE500] px-6 py-3 text-sm font-semibold text-[#191919] transition-opacity disabled:opacity-50"
       >
-        {sending ? '공유 중...' : '카카오톡으로 공유'}
+        <span className="inline-flex items-center justify-center gap-2">
+          <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 18 18" fill="none" className="flex-shrink-0">
+            <path d="M9 1C4.58 1 1 3.87 1 7.35c0 2.17 1.4 4.08 3.55 5.18l-.9 3.3a.25.25 0 0 0 .38.28l3.73-2.48c.4.05.81.07 1.24.07 4.42 0 8-2.87 8-6.35S13.42 1 9 1z" fill="currentColor"/>
+          </svg>
+          {sending ? '공유 중...' : '카카오톡으로 공유'}
+        </span>
       </button>
       {error && (
         <p className="text-xs text-red-500">{error}</p>
