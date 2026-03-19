@@ -4,6 +4,13 @@ const KAKAO_SDK_URL = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js';
 
 let loadPromise: Promise<void> | null = null;
 
+/** SDK가 로드 + 초기화 완료되었는지 동기 확인 */
+export function isKakaoSDKReady(): boolean {
+  return typeof window !== 'undefined'
+    && !!window.Kakao
+    && window.Kakao.isInitialized();
+}
+
 /** SDK 스크립트 로드 + 초기화 (한 번만 실행) */
 export function loadKakaoSDK(): Promise<void> {
   const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;

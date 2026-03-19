@@ -7,7 +7,7 @@ import type { ShareableData } from './serializer';
 const MAX_SHARE_SIZE = 100_000;
 
 /** 정산 데이터를 Supabase에 저장하고 짧은 ID 반환 */
-export async function saveShare(data: ShareableData): Promise<string> {
+export async function saveShare(data: ShareableData, id?: string): Promise<string> {
   if (!supabase) {
     throw new Error('공유 기능이 비활성화되어 있습니다.');
   }
@@ -17,17 +17,24 @@ export async function saveShare(data: ShareableData): Promise<string> {
     throw new Error('정산 데이터가 너무 큽니다. 세션 수를 줄여주세요.');
   }
 
-  const id = nanoid(10);
+  const shareId = id ?? nanoid(10);
 
-  const { error } = await supabase
+  const insert = () => supabase!
     .from('shared_settlements')
-    .insert({ id, data });
+    .insert({ id: shareId, data });
+
+  let { error } = await insert();
+
+  // 1회 자동 재시도
+  if (error) {
+    ({ error } = await insert());
+  }
 
   if (error) {
     throw new Error('정산 데이터 저장에 실패했습니다.');
   }
 
-  return id;
+  return shareId;
 }
 
 export type ShareResult =

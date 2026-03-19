@@ -53,13 +53,36 @@ describe('saveShare', () => {
     expect(mockInsert).toHaveBeenCalledWith({ id: 'mock-id-10', data });
   });
 
-  it('Supabase 에러 시 throw', async () => {
+  it('외부에서 ID를 주입하면 nanoid 대신 사용', async () => {
+    mockInsert.mockResolvedValue({ error: null });
+
+    const data = { members: [], sessions: [], settlement: [] };
+    const id = await saveShare(data, 'custom-id');
+
+    expect(id).toBe('custom-id');
+    expect(mockInsert).toHaveBeenCalledWith({ id: 'custom-id', data });
+  });
+
+  it('첫 번째 실패 후 1회 재시도 성공', async () => {
+    mockInsert
+      .mockResolvedValueOnce({ error: { message: 'DB error' } })
+      .mockResolvedValueOnce({ error: null });
+
+    const data = { members: [], sessions: [], settlement: [] };
+    const id = await saveShare(data);
+
+    expect(id).toBe('mock-id-10');
+    expect(mockInsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('2회 연속 실패 시 throw', async () => {
     mockInsert.mockResolvedValue({ error: { message: 'DB error' } });
 
     const data = { members: [], sessions: [], settlement: [] };
     await expect(saveShare(data)).rejects.toThrow(
       '정산 데이터 저장에 실패했습니다.',
     );
+    expect(mockInsert).toHaveBeenCalledTimes(2);
   });
 });
 

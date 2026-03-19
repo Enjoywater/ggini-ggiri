@@ -18,6 +18,31 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+describe('isKakaoSDKReady', () => {
+  it('window.Kakao가 없으면 false', async () => {
+    const mod = await import('../kakao-sdk');
+    expect(mod.isKakaoSDKReady()).toBe(false);
+  });
+
+  it('Kakao가 있지만 초기화 전이면 false', async () => {
+    (window as unknown as Record<string, unknown>).Kakao = {
+      isInitialized: () => false,
+      init: vi.fn(),
+    };
+    const mod = await import('../kakao-sdk');
+    expect(mod.isKakaoSDKReady()).toBe(false);
+  });
+
+  it('Kakao가 초기화 완료되면 true', async () => {
+    (window as unknown as Record<string, unknown>).Kakao = {
+      isInitialized: () => true,
+      init: vi.fn(),
+    };
+    const mod = await import('../kakao-sdk');
+    expect(mod.isKakaoSDKReady()).toBe(true);
+  });
+});
+
 describe('loadKakaoSDK', () => {
   it('KAKAO_JS_KEY가 없으면 reject', async () => {
     vi.stubEnv('NEXT_PUBLIC_KAKAO_JS_KEY', '');

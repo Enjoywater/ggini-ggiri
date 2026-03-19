@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { shareToKakao, isKakaoAvailable } from '../lib/kakao-share';
+import { loadKakaoSDK } from '@/shared/lib/kakao-sdk';
 import type { ShareableData } from '@/shared/lib/serializer';
 import type { UserAccount, Member } from '@/shared/types';
 import type { Transfer } from '@/features/calculate';
@@ -18,11 +19,18 @@ export function ShareButton({ data, transfers, members, account, totalLabel }: S
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 마운트 시 SDK 프리로드 (fire-and-forget)
+  useEffect(() => {
+    if (isKakaoAvailable()) {
+      loadKakaoSDK().catch(() => {});
+    }
+  }, []);
+
   const handleShare = useCallback(async () => {
     setError(null);
     setSending(true);
     try {
-      const available = await isKakaoAvailable();
+      const available = isKakaoAvailable();
       if (!available) {
         setError('카카오톡 공유를 사용할 수 없습니다. 텍스트 공유를 이용해주세요.');
         return;

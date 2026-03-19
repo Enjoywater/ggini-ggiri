@@ -8,10 +8,15 @@ import type { ShareableData } from '@/shared/lib/serializer';
 
 const mockShareToKakao = vi.fn();
 const mockIsKakaoAvailable = vi.fn();
+const mockLoadKakaoSDK = vi.fn();
 
 vi.mock('../../lib/kakao-share', () => ({
   shareToKakao: (...args: unknown[]) => mockShareToKakao(...args),
   isKakaoAvailable: () => mockIsKakaoAvailable(),
+}));
+
+vi.mock('@/shared/lib/kakao-sdk', () => ({
+  loadKakaoSDK: (...args: unknown[]) => mockLoadKakaoSDK(...args),
 }));
 
 const members: Member[] = [
@@ -39,8 +44,9 @@ const defaultProps = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockIsKakaoAvailable.mockResolvedValue(true);
+  mockIsKakaoAvailable.mockReturnValue(true);
   mockShareToKakao.mockResolvedValue(undefined);
+  mockLoadKakaoSDK.mockResolvedValue(undefined);
 });
 
 describe('ShareButton', () => {
@@ -78,9 +84,24 @@ describe('ShareButton', () => {
     });
   });
 
+  it('마운트 시 SDK 프리로드 호출', async () => {
+    render(<ShareButton {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(mockLoadKakaoSDK).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('카카오 사용 불가 시 프리로드 호출하지 않음', () => {
+    mockIsKakaoAvailable.mockReturnValue(false);
+    render(<ShareButton {...defaultProps} />);
+
+    expect(mockLoadKakaoSDK).not.toHaveBeenCalled();
+  });
+
   it('카카오톡 사용 불가 시 에러 메시지 표시', async () => {
     const user = userEvent.setup();
-    mockIsKakaoAvailable.mockResolvedValue(false);
+    mockIsKakaoAvailable.mockReturnValue(false);
 
     render(<ShareButton {...defaultProps} />);
 
