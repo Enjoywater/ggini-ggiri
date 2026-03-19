@@ -13,6 +13,8 @@ import { useModalManager } from '@/shared/lib/use-modal-manager';
 import { formatAmount } from '@/shared/lib/formatters';
 import { SessionCard } from '@/widgets/session-card';
 import { useNewItemIds } from '@/shared/lib/use-animate-list';
+import { useOnboardingStore } from '@/entities/onboarding';
+import { OnboardingTooltip, useOnboardingAutoProgress } from '@/features/inline-onboarding';
 
 const MODAL_KEYS = ['delete', 'savePreset', 'loadPreset', 'deletePreset', 'deleteSession', 'presetAction'] as const;
 
@@ -183,6 +185,9 @@ export function MainPage() {
     });
   };
 
+  const { currentStep, dismiss: dismissOnboarding } = useOnboardingStore();
+  useOnboardingAutoProgress();
+
   const newMemberIds = useNewItemIds(members);
   const newSessionIds = useNewItemIds(sessions);
 
@@ -217,28 +222,30 @@ export function MainPage() {
           참여자
         </h2>
 
-        <div className="flex flex-col gap-1 mb-3">
-          <div className="flex gap-2">
-            <Input
-              placeholder="이름 입력"
-              value={newName}
-              onChange={(e) => handleNameChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              aria-label="참여자 이름 입력"
-            />
-            <Button
-              onClick={handleAddMember}
-              disabled={!newName.trim()}
-              size="md"
-              aria-label="참여자 추가"
-            >
-              추가
-            </Button>
+        <OnboardingTooltip step="add-member" currentStep={currentStep} message="먼저 참여자를 추가해 보세요!" onDismiss={dismissOnboarding}>
+          <div className="flex flex-col gap-1 mb-3">
+            <div className="flex gap-2">
+              <Input
+                placeholder="이름 입력"
+                value={newName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                aria-label="참여자 이름 입력"
+              />
+              <Button
+                onClick={handleAddMember}
+                disabled={!newName.trim()}
+                size="md"
+                aria-label="참여자 추가"
+              >
+                추가
+              </Button>
+            </div>
+            {nameError && (
+              <p className="text-xs text-danger-dark">{nameError}</p>
+            )}
           </div>
-          {nameError && (
-            <p className="text-xs text-danger-dark">{nameError}</p>
-          )}
-        </div>
+        </OnboardingTooltip>
 
         {members.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -341,15 +348,17 @@ export function MainPage() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-text-primary">N차 내역</h2>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleAddSession}
-            disabled={members.length === 0}
-            aria-label="세션 추가"
-          >
-            + 추가
-          </Button>
+          <OnboardingTooltip step="add-session" currentStep={currentStep} message="N차를 추가해 보세요!" onDismiss={dismissOnboarding}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddSession}
+              disabled={members.length === 0}
+              aria-label="세션 추가"
+            >
+              + 추가
+            </Button>
+          </OnboardingTooltip>
         </div>
 
         {sessions.length === 0 && (
@@ -361,20 +370,24 @@ export function MainPage() {
           </Card>
         )}
 
-        {sessions.map((session, i) => (
-          <div
-            key={session.id}
-            className={newSessionIds.has(session.id) ? 'animate-spring-in' : ''}
-            style={newSessionIds.has(session.id) ? { animationDelay: `${i * 80}ms` } : undefined}
-          >
-            <SessionCard
-              session={session}
-              index={i}
-              onRemove={handleRemoveSession}
-              onDuplicate={duplicateSession}
-            />
+        <OnboardingTooltip step="enter-amount" currentStep={currentStep} message="금액을 입력해 보세요!" position="top" onDismiss={dismissOnboarding}>
+          <div>
+            {sessions.map((session, i) => (
+              <div
+                key={session.id}
+                className={`${newSessionIds.has(session.id) ? 'animate-spring-in' : ''} ${i > 0 ? 'mt-4' : ''}`}
+                style={newSessionIds.has(session.id) ? { animationDelay: `${i * 80}ms` } : undefined}
+              >
+                <SessionCard
+                  session={session}
+                  index={i}
+                  onRemove={handleRemoveSession}
+                  onDuplicate={duplicateSession}
+                />
+              </div>
+            ))}
           </div>
-        ))}
+        </OnboardingTooltip>
       </div>
 
       {/* Calculate Button */}
@@ -396,9 +409,11 @@ export function MainPage() {
       )}
 
       <StickyBottomBar show={sessions.length > 0}>
-        <LinkButton href="/settlement" fullWidth size="lg" disabled={!canCalculate}>
-          정산하기
-        </LinkButton>
+        <OnboardingTooltip step="settle" currentStep={currentStep} message="정산 결과를 확인해 보세요!" position="top" onDismiss={dismissOnboarding}>
+          <LinkButton href="/settlement" fullWidth size="lg" disabled={!canCalculate}>
+            정산하기
+          </LinkButton>
+        </OnboardingTooltip>
       </StickyBottomBar>
 
       {/* Delete Confirmation Modal */}
