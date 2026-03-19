@@ -245,24 +245,24 @@ src/
 
 **Phase 1 — 기반 인프라 (병렬 가능)**
 - [x] B-4: 글로벌 토스트 — `Toast.tsx`, `ToastContainer.tsx`, `toast-store.ts`, `use-toast.ts` (A-7에서 구현 완료)
-- [ ] B-3: EmptyState 컴포넌트 — `EmptyState.tsx` + SVG 일러스트 3종 (`currentColor` 기반 다크모드 자동 대응)
+- [x] B-3: EmptyState 컴포넌트 — `EmptyState.tsx` + SVG 일러스트 3종 (`currentColor` 기반 다크모드 자동 대응)
 
 **Phase 2 — 독립 기능 (병렬 가능)**
 - [x] B-1: Sticky 정산하기 버튼 — `StickyBottomBar.tsx`, `backdrop-blur-md`, `safe-area-inset-bottom`, 스크롤 최적화
 - [x] B-2: 빠른 금액 버튼 — SessionCard 내 Chip 버튼 (+1천/+5천/+1만/+5만)
-- [ ] B-3': 빈 상태 적용 — 상황별 맞춤 메시지 + CTA 유도 (MainPage, HistoryPage 등)
+- [x] B-3': 빈 상태 적용 — 상황별 맞춤 메시지 + CTA 유도 (MainPage, HistoryPage 등)
 
 **Phase 3 — 통합 기능**
-- [ ] B-5: 인라인 온보딩 — `entities/onboarding/` + `features/inline-onboarding/`, 4단계 자동 진행, Zustand persist, `completionCondition` 자동 감지
+- [x] B-5: 인라인 온보딩 — `entities/onboarding/` + `features/inline-onboarding/`, 4단계 자동 진행, Zustand persist, `completionCondition` 자동 감지
 
 ### Plan C: 비주얼 개선
 
 독립 구현 가능, 우선순위 순:
 
 - [x] C-4: 주류 섹션 시각 구분 — `border-l-4 border-pastel-peach-dark` + `bg-pastel-peach/50` + 음주자 수 표시 (SessionCard.tsx)
-- [ ] C-1: 세션 카드 컬러 스트라이프 — Card에 `accentColor` prop + `border-l-4` 파스텔 회전색 + "1차" 차수 배지 (Card.tsx, SessionCard.tsx)
-- [ ] C-3: 공유 섹션 강조 — `<section>` + `bg-gradient-to-br from-primary/20 to-secondary/20` + 아이콘 추가 (SettlementPage.tsx, ShareButton.tsx)
-- [ ] C-2: 정산 카드 멤버 컬러 — `members` prop 추가 + `tintMap`으로 `bg-pastel-{color}/10` 배경 + 색상 도트 (SettlementResult.tsx, SettlementPage.tsx)
+- [x] C-1: 세션 카드 컬러 스트라이프 — Card에 `accentColor` prop + `border-l-4` 파스텔 회전색 + "1차" 차수 배지 (Card.tsx, SessionCard.tsx)
+- [x] C-3: 공유 섹션 강조 — `<section>` + `bg-gradient-to-br from-primary/20 to-secondary/20` + 아이콘 추가 (SettlementPage.tsx, ShareButton.tsx)
+- [x] C-2: 정산 카드 멤버 컬러 — `members` prop 추가 + `tintMap`으로 `bg-pastel-{color}/10` 배경 + 색상 도트 (SettlementResult.tsx, SettlementPage.tsx)
 
 ### Plan D: 정산 근거 투명성 + 보안 강화 (신규)
 
