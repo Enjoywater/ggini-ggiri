@@ -3,6 +3,8 @@ import {
   decompressFromEncodedURIComponent,
 } from 'lz-string';
 import type { Member, Session, SettlementResult } from '@/shared/types';
+import { validateSessionConsistency } from './validators';
+import { LIMITS } from './constants';
 
 /** URL에 포함되는 공유 데이터 (계좌 정보 절대 미포함) */
 export interface ShareableData {
@@ -47,6 +49,11 @@ export function validateShareableData(data: unknown): ShareableData {
     throw new Error('필수 필드가 누락되었습니다.');
   }
 
+  // 배열 길이 제한 (DoS 방지)
+  if (obj.members.length > LIMITS.ARRAY_MAX_LENGTH || obj.sessions.length > LIMITS.ARRAY_MAX_LENGTH || obj.settlement.length > LIMITS.ARRAY_MAX_LENGTH) {
+    throw new Error('데이터 항목 수가 허용 범위를 초과합니다.');
+  }
+
   // 계좌 정보 포함 여부 검사
   const raw = JSON.stringify(data);
   if (raw.includes('accountNumber') || raw.includes('bankName')) {
@@ -57,8 +64,19 @@ export function validateShareableData(data: unknown): ShareableData {
   const sessions = obj.sessions.map(validateSession);
   const settlement = obj.settlement.map(validateSettlementResult);
 
+  // 세션 논리 일관성 검증
+  for (const session of sessions) {
+    const consistency = validateSessionConsistency(session, members);
+    if (!consistency.valid) {
+      throw new Error(`세션 데이터 일관성 오류: ${consistency.error}`);
+    }
+  }
+
   let transfers: ShareableData['transfers'];
   if (Array.isArray(obj.transfers)) {
+    if (obj.transfers.length > LIMITS.ARRAY_MAX_LENGTH) {
+      throw new Error('송금 항목 수가 허용 범위를 초과합니다.');
+    }
     transfers = obj.transfers.map(validateTransfer);
   }
 
@@ -99,6 +117,10 @@ function validateSession(raw: unknown): Session {
     throw new Error('잘못된 세션 데이터');
   }
 
+  if (!Number.isFinite(s.totalAmount) || s.totalAmount < 0 || s.totalAmount > LIMITS.SESSION_AMOUNT_MAX) {
+    throw new Error('잘못된 세션 금액');
+  }
+
   const session: Session = {
     id: sessionId,
     title: sanitize(s.title) || '제목 없음',
@@ -118,6 +140,12 @@ function validateSession(raw: unknown): Session {
       !Array.isArray(a.drinkerIds)
     ) {
       throw new Error('잘못된 주류 데이터');
+    }
+    if (!Number.isFinite(a.unitPrice) || a.unitPrice < 0 || a.unitPrice > LIMITS.ALCOHOL_UNIT_PRICE_MAX) {
+      throw new Error('잘못된 주류 단가');
+    }
+    if (!Number.isFinite(a.quantity) || a.quantity < 0 || a.quantity > LIMITS.ALCOHOL_QUANTITY_MAX) {
+      throw new Error('잘못된 주류 수량');
     }
     session.alcohol = {
       unitPrice: a.unitPrice,
@@ -145,6 +173,14 @@ function validateSettlementResult(raw: unknown): SettlementResult {
     throw new Error('잘못된 정산 데이터');
   }
 
+  if (!Number.isFinite(r.totalAmount) || Math.abs(r.totalAmount) > LIMITS.SETTLEMENT_AMOUNT_MAX) {
+    throw new Error('잘못된 정산 금액');
+  }
+
+  if (r.details.length > LIMITS.ARRAY_MAX_LENGTH) {
+    throw new Error('정산 세부 항목 수가 허용 범위를 초과합니다.');
+  }
+
   return {
     memberId: sanitize(r.memberId),
     memberName: sanitize(r.memberName),
@@ -160,6 +196,13 @@ function validateSettlementResult(raw: unknown): SettlementResult {
         typeof det.subtotal !== 'number'
       ) {
         throw new Error('잘못된 세션 정산 데이터');
+      }
+      if (
+        !Number.isFinite(det.baseAmount) || Math.abs(det.baseAmount) > LIMITS.SETTLEMENT_AMOUNT_MAX ||
+        !Number.isFinite(det.alcoholAmount) || Math.abs(det.alcoholAmount) > LIMITS.SETTLEMENT_AMOUNT_MAX ||
+        !Number.isFinite(det.subtotal) || Math.abs(det.subtotal) > LIMITS.SETTLEMENT_AMOUNT_MAX
+      ) {
+        throw new Error('잘못된 세션 정산 금액');
       }
       return {
         sessionId: sanitize(det.sessionId),
@@ -178,7 +221,7 @@ function validateTransfer(raw: unknown): { from: string; to: string; amount: num
   if (typeof t.from !== 'string' || typeof t.to !== 'string' || typeof t.amount !== 'number') {
     throw new Error('잘못된 송금 데이터');
   }
-  if (!Number.isFinite(t.amount) || t.amount <= 0) {
+  if (!Number.isFinite(t.amount) || t.amount <= 0 || t.amount > LIMITS.SETTLEMENT_AMOUNT_MAX) {
     throw new Error('잘못된 송금 금액');
   }
   return { from: sanitize(t.from), to: sanitize(t.to), amount: t.amount };
@@ -187,7 +230,7 @@ function validateTransfer(raw: unknown): { from: string; to: string; amount: num
 /** 제어 문자 제거 + HTML 태그 제거 (XSS 방어는 React JSX 자동 이스케이핑에 위임) */
 function sanitize(str: string): string {
   return str
-    .slice(0, 200)
+    .slice(0, LIMITS.STRING_MAX_LENGTH)
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
     .replace(/<[^>]*>/g, '');
 }

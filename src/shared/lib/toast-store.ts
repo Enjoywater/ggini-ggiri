@@ -14,6 +14,12 @@ interface ToastState {
 
 let toastCounter = 0;
 
+function calcDuration(message: string, type: ToastItem['type']): number {
+  const base = 2000 + (message.length / 5.8) * 1000;
+  const clamped = Math.min(base, 5000);
+  return type === 'error' ? clamped + 1500 : clamped;
+}
+
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
   addToast: (message, type = 'success') => {
@@ -21,11 +27,12 @@ export const useToastStore = create<ToastState>((set) => ({
     set((state) => ({
       toasts: [...state.toasts.slice(-2), { id, message, type }],
     }));
+    const duration = calcDuration(message, type);
     setTimeout(() => {
       set((state) => ({
         toasts: state.toasts.filter((t) => t.id !== id),
       }));
-    }, 2500);
+    }, duration);
   },
   removeToast: (id) =>
     set((state) => ({

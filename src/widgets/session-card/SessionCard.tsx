@@ -195,6 +195,31 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
           />
         </FormField>
 
+        {/* Quick Amount Buttons */}
+        <div className="flex gap-2">
+          {([
+            [1000, '+1천'],
+            [5000, '+5천'],
+            [10000, '+1만'],
+            [50000, '+5만'],
+          ] as const).map(([amount, label]) => (
+            <Chip
+              key={amount}
+              role="button"
+              color="sky"
+              className="flex-1 justify-center text-xs"
+              onClick={() =>
+                updateSession(session.id, {
+                  totalAmount: session.totalAmount + amount,
+                })
+              }
+              aria-label={`${label} 추가`}
+            >
+              {label}
+            </Chip>
+          ))}
+        </div>
+
         {/* Payer Selection */}
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-text-secondary">결제자</span>
@@ -242,7 +267,7 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
         </div>
 
         {/* Alcohol Switch */}
-        <div className="border-t border-border pt-4" aria-expanded={alcoholEnabled}>
+        <div className="border-t border-border pt-4">
           <Switch
             checked={alcoholEnabled}
             onChange={handleAlcoholToggle}
@@ -257,7 +282,12 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
         >
           <div className="overflow-hidden">
             {(alcoholEnabled || session.alcohol) && (
-              <div className="flex flex-col gap-3 rounded-xl bg-pastel-peach/30 p-3 mt-0">
+              <div className="flex flex-col gap-3 rounded-xl border-l-4 border-pastel-peach-dark bg-pastel-peach/50 p-3 mt-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-text-secondary">
+                    음주자 {session.alcohol?.drinkerIds.length ?? 0}명
+                  </span>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField error={unitPriceError}>
                     <Input

@@ -8,10 +8,12 @@ Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나
 - 참여자 추가/삭제 및 그룹(프리셋) 저장/불러오기
 - 참여자 이름 탭으로 인라인 수정, ✕ 버튼으로 삭제
 - N차별로 결제자, 참여자, 금액 입력
+- 빠른 금액 버튼 (+1천/+5천/+1만/+5만) 으로 간편 입력
 - 참여자/음주자 전체 선택/해제 토글
 - 세션 합계 실시간 표시
-- 술값 별도 정산(주류 단가/수량/음주자 지정)
+- 술값 별도 정산(주류 단가/수량/음주자 지정, 시각적으로 구분된 주류 섹션)
 - 자동 정산 결과 확인(개인별 부담 + 송금 요약)
+- 정산 근거 투명 공개(세션별 계산식 펼쳐보기: 기본 부담, 주류 부담, 10원 절사 설명)
 - 송금 완료 체크 (송금 건별 완료 표시, 완료 카운트, 초기화)
 - 계좌 정보 저장 후 원클릭 복사
 - 계좌 미설정 시 설정 페이지 유도 CTA 배너
@@ -24,6 +26,8 @@ Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나
 - 공유 링크(`detail`)로 정산 상세 확인
 - 정산 기록 JSON Export/Import (데이터 백업 및 복원, 계좌 정보 자동 제외)
 - 접근성 지원 (WCAG AA 색상 대비, 44px 터치 타겟, ARIA 속성, 키보드 네비게이션, 모달 포커스 트랩 + X 닫기 버튼)
+- Sticky 정산하기 버튼 (스크롤해도 항상 하단 고정, safe-area 대응)
+- Skeleton 로딩 화면 (하이드레이션 중 레이아웃 보존)
 
 ## 2) 핵심 정산 규칙
 
@@ -109,7 +113,7 @@ Vercel에 배포 중이며, 환경변수 설정이 필요합니다:
 
 ## 5) 기술 스택
 
-- 프레임워크: Next.js 16 (App Router), React 19, TypeScript
+- 프레임워크: Next.js 16 (App Router), React 19, TypeScript (strict mode)
 - 상태관리: Zustand + persist
 - 정산 연산: big.js
 - 공유 데이터 압축: lz-string
@@ -117,9 +121,10 @@ Vercel에 배포 중이며, 환경변수 설정이 필요합니다:
 - 카카오톡 공유: Kakao JS SDK
 - 식별자 생성: nanoid
 - 스타일: Tailwind CSS v4
-- UI: LinkButton (공유 스타일), Modal (useId, X 닫기, dvh 스크롤), Chip (role 분리)
+- UI: LinkButton, Modal (useId, X 닫기, dvh 스크롤), Chip (role 분리), StickyBottomBar, Skeleton
 - PWA: manifest.json + Service Worker
-- 테스트: Vitest (645 tests, 48 files)
+- 테스트: Vitest (678 tests, 50 files)
+- 보안 헤더: vercel.json (CSP, X-Frame-Options, Permissions-Policy 등)
 
 ## 6) 아키텍처
 
@@ -129,10 +134,13 @@ Feature-Sliced Design(FSD) 구조를 따릅니다.
 src/
 ├─ app/          # 라우트 엔트리
 ├─ views/        # 페이지 단위 화면 조합
-├─ widgets/      # 복합 UI 블록
-├─ features/     # 사용자 액션/비즈니스 기능
-├─ entities/     # 도메인 상태 및 모델
-└─ shared/       # 공용 UI/유틸/타입
+├─ widgets/      # 복합 UI 블록 (SessionCard, SettlementResult)
+├─ features/     # 사용자 액션/비즈니스 기능 (calculate, share, export-import)
+├─ entities/     # 도메인 상태 및 모델 (member, session, account, history, preset, theme, transfer-completion)
+└─ shared/       # 공용 UI/유틸/타입/상수
+    ├─ ui/       # Button, Input, Modal, Card, Chip, Switch, StickyBottomBar, Skeleton 등
+    ├─ lib/      # settlement-engine, validators, serializer, constants, toast, hooks 등
+    └─ types/    # TypeScript 인터페이스
 ```
 
 주요 라우트:
@@ -148,35 +156,44 @@ src/
 - Zustand persist로 로컬 기기에 데이터 저장
   - 참여자, 세션, 계좌, 프리셋, 히스토리, 송금 완료 상태
 - 공유 데이터는 Supabase에 저장, 짧은 ID로 접근 (`/detail?id=xxx`)
+- Supabase 저장 전 `validateShareableData()` 검증 수행 (DB 오염 방지)
 - 환경변수 미설정 시 Supabase/Kakao 기능이 안전하게 비활성화 (런타임 크래시 방지)
 - Service Worker에서 Supabase/Kakao 등 외부 API 응답은 캐싱하지 않음
 - 공유 URL에는 계좌 정보 미포함
 - 카카오톡 카드의 description에 계좌 정보 표시 (URL에는 미포함)
-- 공유 링크 복원 시 구조/타입 검증 수행 (transfers 필드 포함)
+- 공유 링크 복원 시 구조/타입/논리 일관성 검증 수행
+  - 배열 길이 제한 (DoS 방지, 최대 100개)
+  - 금액 범위 검증 (세션 1억, 단가 1천만, 수량 999, 정산 합산 10억)
+  - 세션 논리 검증 (결제자∈참여자, 음주자⊆참여자, 중복 ID, 주류 총액 ≤ 세션 총액)
+  - transfers 필드 포함 검증
 - 복원 데이터에 계좌 정보 필드가 포함되면 차단
-- 문자열 sanitize (제어 문자 + HTML 태그 제거, XSS 방어는 React JSX 자동 이스케이핑에 위임)
+- 문자열 sanitize (제어 문자 + HTML 태그 제거, 200자 제한, XSS 방어는 React JSX 자동 이스케이핑에 위임)
 - Supabase 공유 데이터 100KB 크기 제한 + ID 형식 검증
+- 검증 상수 일원화 (`shared/lib/constants.ts` — validators와 serializer가 동일 상수 참조)
+- 보안 헤더 적용 (`vercel.json`):
+  - Content-Security-Policy (script/style/connect/img/font/worker/frame-ancestors/base-uri/form-action/object-src)
+  - X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy
 
 ## 8) 테스트 범위
 
-현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 645개 테스트, 48개 파일)
+현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 678개 테스트, 50개 파일)
 
 - 정산 엔진 (`settlement-engine`, edge cases, settle/calculateBalance 정합성)
 - 공유/직렬화 (`text-share` 세션별 내역 포함, `serializer`)
 - 스토어 무결성 (`store-integrity`, `history-store`, `preset-store`)
 - 세션 복제 동작 (`session-duplication`)
 - UI 상태 동기화 (`alcohol-sync`)
-- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`, `FormField`, `AnimatedAmount`, `CheckAnimation`, `ToastContainer`)
+- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`, `FormField`, `AnimatedAmount`, `CheckAnimation`, `ToastContainer`, `StickyBottomBar`, `Skeleton`)
 - Export/Import (`validate`, `export`, `import`, `ExportImportButtons` — 스키마 검증, 보안 필터링, UI)
-- 접근성 (`accessibility` — ARIA 속성, 포커스 트랩, 키보드 네비게이션)
-- 유효성 검증 (`validators` — 계좌번호, 금액, 멤버명, 주류 수량/단가)
+- 접근성 (`accessibility` — ARIA 속성, 포커스 트랩, 키보드 네비게이션, label 연결)
+- 유효성 검증 (`validators` — 계좌번호, 금액, 멤버명, 주류 수량/단가, 세션 논리 일관성)
 - 에러 처리 (`error-handler` — AppError 타입, 사용자 취소 감지, 한국어 메시지)
 - 뷰 레이어 통합 테스트
   - `MainPage` — 참여자 CRUD, 프리셋 관리, 세션 관리, 합계/정산 버튼, 계좌 예금주 자동 추가
   - `SettlementPage` — 송금 요약/완료 토글, 계좌 안내 CTA, 히스토리 자동 저장, 술값 정산
   - `SettingsPage` — 테마 전환, 계좌 CRUD/유효성 검증, 전체 초기화, 백업/복원
   - `HistoryPage` — 목록 렌더링, expand/collapse, 삭제 플로우, 포맷터
-- 위젯 테스트 (`SessionCard` — 렌더링, 결제자/참여자 토글, 전체 선택/해제, 술값 스위치, 음주자 관리)
+- 위젯 테스트 (`SessionCard` — 렌더링, 결제자/참여자 토글, 전체 선택/해제, 술값 스위치, 음주자 관리, 빠른 금액 버튼)
 - E2E 유저 저니 (`e2e-journey` — 2인 정산, 5인 MT 술값 분리, 프리셋→정산→히스토리, 멤버 삭제 연쇄, 전체 초기화, 직장인 회식, 세션 복제, 엣지 케이스)
 - 송금 완료 스토어 (`transfer-completion` — toggle, reset, persist, 키 생성)
 - 애니메이션 훅 (`use-reduced-motion`, `use-animated-number`, `use-animate-list` — 모션 감지, rAF 보간, 리스트 추가 감지)
@@ -188,6 +205,8 @@ src/
 - 계좌 예금주가 참여자 목록에 없으면 메인 화면 진입 시 자동 추가됩니다.
 - 정산 페이지 진입 시 결과가 히스토리에 자동 저장됩니다(중복 저장 방지 처리 포함).
 - 히스토리는 최대 50개까지 보관됩니다.
+- 토스트 알림은 메시지 길이에 따라 자동 Duration이 조절됩니다 (2~5초, 에러 시 +1.5초).
+- 모달 상태는 `useModalManager` 훅으로 통합 관리됩니다 (MainPage 6개 모달).
 
 ---
 
@@ -214,7 +233,7 @@ src/
 
 **Phase 3 — 통합 시스템**
 - [x] A-2: 정산 결과 진입 시퀀스 — staggered fade-up (index × 80ms) + 금액 카운트업 + 타이틀 bounce
-- [x] A-7: 토스트 시스템 — Zustand store + `createPortal`, slide-up → 2s 유지 → fade-out
+- [x] A-7: 토스트 시스템 — Zustand store + `createPortal`, slide-up → 자동 duration → fade-out
 - [x] A-6: 송금 완료 체크 — SVG `stroke-dasharray` 드로잉 300ms + CSS 스파클 파티클 200ms
 
 **Phase 4 — 페이지 전환**
@@ -229,25 +248,34 @@ src/
 - [ ] B-3: EmptyState 컴포넌트 — `EmptyState.tsx` + SVG 일러스트 3종 (`currentColor` 기반 다크모드 자동 대응)
 
 **Phase 2 — 독립 기능 (병렬 가능)**
-- [ ] B-1: Sticky 정산하기 버튼 — `StickyBottomBar.tsx` + `useScrollShadow` 훅, `backdrop-blur-sm`, `safe-area-inset-bottom`
-- [ ] B-2: 빠른 금액 버튼 — `features/quick-amount/`, `+1천`/`+5천`/`+1만` Chip → `onAmountChange(current + preset)`
+- [x] B-1: Sticky 정산하기 버튼 — `StickyBottomBar.tsx`, `backdrop-blur-md`, `safe-area-inset-bottom`, 스크롤 최적화
+- [x] B-2: 빠른 금액 버튼 — SessionCard 내 Chip 버튼 (+1천/+5천/+1만/+5만)
 - [ ] B-3': 빈 상태 적용 — 상황별 맞춤 메시지 + CTA 유도 (MainPage, HistoryPage 등)
 
 **Phase 3 — 통합 기능**
 - [ ] B-5: 인라인 온보딩 — `entities/onboarding/` + `features/inline-onboarding/`, 4단계 자동 진행, Zustand persist, `completionCondition` 자동 감지
 
-> 신규 15개 / 수정 11개 파일
-
 ### Plan C: 비주얼 개선
 
 독립 구현 가능, 우선순위 순:
 
-- [ ] C-4: 주류 섹션 시각 구분 — `bg-pastel-peach/30` → `bg-pastel-lavender/20` + border + 🍺 레이블, `role="region"` (SessionCard.tsx)
+- [x] C-4: 주류 섹션 시각 구분 — `border-l-4 border-pastel-peach-dark` + `bg-pastel-peach/50` + 음주자 수 표시 (SessionCard.tsx)
 - [ ] C-1: 세션 카드 컬러 스트라이프 — Card에 `accentColor` prop + `border-l-4` 파스텔 회전색 + "1차" 차수 배지 (Card.tsx, SessionCard.tsx)
 - [ ] C-3: 공유 섹션 강조 — `<section>` + `bg-gradient-to-br from-primary/20 to-secondary/20` + 아이콘 추가 (SettlementPage.tsx, ShareButton.tsx)
 - [ ] C-2: 정산 카드 멤버 컬러 — `members` prop 추가 + `tintMap`으로 `bg-pastel-{color}/10` 배경 + 색상 도트 (SettlementResult.tsx, SettlementPage.tsx)
 
-> 수정 6개 파일 | 신규 파일 없음 | 다크 모드 자동 대응 (CSS 변수 기반)
+### Plan D: 정산 근거 투명성 + 보안 강화 (신규)
+
+- [x] D-1: 정산 근거 설명 — SettlementResult에 세션별 계산식 토글 (기본 부담, 주류 부담, 10원 절사)
+- [x] D-2: 세션 데이터 논리 검증 — `validateSessionConsistency` (결제자∈참여자, 음주자⊆참여자, 중복 ID, 주류 초과)
+- [x] D-3: 보안 헤더 — `vercel.json` CSP + X-Frame-Options + Permissions-Policy
+- [x] D-4: 검증 상수 일원화 — `constants.ts`로 validators/serializer 상한값 통일
+- [x] D-5: 공유 저장 전 검증 — `saveShare()` DB insert 전 `validateShareableData()` 호출
+- [x] D-6: Toast 자동 Duration — 메시지 길이 비례 (2~5초) + 에러 +1.5초
+- [x] D-7: Skeleton 로딩 — MainPage/SettlementPage 하이드레이션 중 레이아웃 보존
+- [x] D-8: Switch WCAG 접근성 — aria-label 이중 라벨링 제거, useId() 도입
+- [x] D-9: MainPage 상태 관리 — useModalManager 훅으로 12개 useState 통합
+- [x] D-10: SettlementPage 리팩토링 — TransferSummary 컴포넌트 추출 + useMemo 최적화
 
 ---
 

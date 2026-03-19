@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Button, LinkButton, CheckAnimation } from '@/shared/ui';
+import { Button, LinkButton, CheckAnimation, SettlementPageSkeleton } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
@@ -15,7 +15,86 @@ import { ShareButton } from '@/features/share';
 import { buildSettlementText, shareText } from '@/features/share/lib/text-share';
 import { SettlementResult } from '@/widgets/settlement-result';
 import type { Transfer } from '@/features/calculate';
+import type { Member } from '@/shared/types';
 import Link from 'next/link';
+
+function TransferSummary({
+  transfers,
+  members,
+  completions,
+  toggleCompletion,
+  resetCompletions,
+}: {
+  transfers: Transfer[];
+  members: Member[];
+  completions: Record<string, boolean>;
+  toggleCompletion: (key: string) => void;
+  resetCompletions: () => void;
+}) {
+  const completedCount = transfers.filter((t) => {
+    const key = getTransferKey(t.from, t.to, t.amount);
+    return !!completions[key];
+  }).length;
+  const hasAnyCompleted = completedCount > 0;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-text-secondary animate-fade-up">
+          송금 요약
+        </h2>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-text-muted">
+            {completedCount}/{transfers.length} 완료
+          </span>
+          {hasAnyCompleted && (
+            <Button variant="ghost" size="sm" onClick={resetCompletions}>
+              초기화
+            </Button>
+          )}
+        </div>
+      </div>
+      {transfers.map((t, index) => {
+        const key = getTransferKey(t.from, t.to, t.amount);
+        const completed = !!completions[key];
+        const fromMember = members.find((m) => m.id === t.from);
+        const toMember = members.find((m) => m.id === t.to);
+        return (
+          <button
+            key={`${t.from}-${t.to}-${t.amount}`}
+            type="button"
+            onClick={() => toggleCompletion(key)}
+            aria-label={`${fromMember?.name} \u2192 ${toMember?.name} ${formatAmount(t.amount)} 송금 완료 토글`}
+            className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors animate-fade-up ${
+              completed
+                ? 'bg-pastel-mint/30'
+                : 'bg-pastel-sky/30'
+            }`}
+            style={{ animationDelay: `${index * 80}ms` }}
+          >
+            <span
+              className={`text-base text-text-primary ${
+                completed ? 'line-through opacity-60' : ''
+              }`}
+            >
+              <CheckAnimation checked={completed} className="mr-1" />
+              <strong>{fromMember?.name}</strong>
+              {' \u2192 '}
+              <strong>{toMember?.name}</strong>
+            </span>
+            <span
+              className={`text-lg font-bold text-primary-dark ${
+                completed ? 'line-through opacity-60' : ''
+              }`}
+            >
+              {formatAmount(t.amount)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function SettlementPage() {
   const hydrated = useHydration();
@@ -39,7 +118,7 @@ export function SettlementPage() {
 
   const mainPayer = useMemo(() => findMainPayer(sessions, members), [sessions, members]);
 
-  const totalAmount = sessions.reduce((sum, s) => sum + s.totalAmount, 0);
+  const totalAmount = useMemo(() => sessions.reduce((sum, s) => sum + s.totalAmount, 0), [sessions]);
 
   // Build a fingerprint from session IDs + totalAmount to detect duplicate saves
   const fingerprint = useMemo(() => {
@@ -115,11 +194,7 @@ export function SettlementPage() {
   }, [transfers, members, account, totalAmount, sessions, results, toast]);
 
   if (!hydrated) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-sm text-text-muted">로딩 중...</p>
-      </div>
-    );
+    return <SettlementPageSkeleton />;
   }
 
   if (sessions.length === 0 || members.length < 2) {
@@ -142,76 +217,21 @@ export function SettlementPage() {
       </div>
 
       {/* Transfer Summary */}
-      {transfers.length > 0 && (() => {
-        const completedCount = transfers.filter((t) => {
-          const key = getTransferKey(t.from, t.to, t.amount);
-          return !!completions[key];
-        }).length;
-        const hasAnyCompleted = completedCount > 0;
-
-        return (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-text-secondary animate-fade-up">
-                송금 요약
-              </h2>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-text-muted">
-                  {completedCount}/{transfers.length} 완료
-                </span>
-                {hasAnyCompleted && (
-                  <Button variant="ghost" size="sm" onClick={resetCompletions}>
-                    초기화
-                  </Button>
-                )}
-              </div>
-            </div>
-            {transfers.map((t, index) => {
-              const key = getTransferKey(t.from, t.to, t.amount);
-              const completed = !!completions[key];
-              const fromMember = members.find((m) => m.id === t.from);
-              const toMember = members.find((m) => m.id === t.to);
-              return (
-                <button
-                  key={`${t.from}-${t.to}-${t.amount}`}
-                  type="button"
-                  onClick={() => toggleCompletion(key)}
-                  aria-label={`${fromMember?.name} → ${toMember?.name} ${formatAmount(t.amount)} 송금 완료 토글`}
-                  className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors animate-fade-up ${
-                    completed
-                      ? 'bg-pastel-mint/30'
-                      : 'bg-pastel-sky/30'
-                  }`}
-                  style={{ animationDelay: `${index * 80}ms` }}
-                >
-                  <span
-                    className={`text-base text-text-primary ${
-                      completed ? 'line-through opacity-60' : ''
-                    }`}
-                  >
-                    <CheckAnimation checked={completed} className="mr-1" />
-                    <strong>{fromMember?.name}</strong>
-                    {' \u2192 '}
-                    <strong>{toMember?.name}</strong>
-                  </span>
-                  <span
-                    className={`text-lg font-bold text-primary-dark ${
-                      completed ? 'line-through opacity-60' : ''
-                    }`}
-                  >
-                    {formatAmount(t.amount)}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        );
-      })()}
+      {transfers.length > 0 && (
+        <TransferSummary
+          transfers={transfers}
+          members={members}
+          completions={completions}
+          toggleCompletion={toggleCompletion}
+          resetCompletions={resetCompletions}
+        />
+      )}
 
       {/* Detail per member */}
       <SettlementResult
         results={results}
         payerName={mainPayer?.name ?? '결제자'}
+        sessions={sessions}
       />
 
       {/* Account Notice */}

@@ -45,7 +45,7 @@ describe('MainPage - 하이드레이션', () => {
   it('하이드레이션 전 로딩 상태 표시', () => {
     mockUseHydration.mockReturnValueOnce(false);
     render(<MainPage />);
-    expect(screen.getByText('로딩 중...')).toBeInTheDocument();
+    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('하이드레이션 후 메인 UI 렌더링', () => {

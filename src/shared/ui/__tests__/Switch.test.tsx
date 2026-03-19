@@ -53,8 +53,31 @@ describe('Switch', () => {
     expect(screen.getByText('Dark mode')).toBeInTheDocument();
   });
 
-  it('associates label with switch via aria-label', () => {
+  it('associates label with switch via htmlFor', () => {
     render(<Switch checked={false} onChange={() => {}} label="Toggle" />);
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-label', 'Toggle');
+    const switchEl = screen.getByRole('switch');
+    const labelEl = screen.getByText('Toggle');
+    expect(labelEl.tagName).toBe('LABEL');
+    expect(labelEl).toHaveAttribute('for', switchEl.id);
+  });
+
+  it('Enter 키로 한 번만 토글', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Switch checked={false} onChange={onChange} />);
+    screen.getByRole('switch').focus();
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it('Space 키로 한 번만 토글', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Switch checked={false} onChange={onChange} />);
+    screen.getByRole('switch').focus();
+    await user.keyboard(' ');
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(true);
   });
 });

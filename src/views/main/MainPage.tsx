@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button, LinkButton, Input, Card, Chip, Modal } from '@/shared/ui';
+import { Button, LinkButton, Input, Card, Chip, Modal, StickyBottomBar, MainPageSkeleton } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
@@ -9,9 +9,12 @@ import { usePresetStore } from '@/entities/preset';
 import type { MemberPreset } from '@/shared/types';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { PASTEL_COLORS } from '@/shared/lib';
+import { useModalManager } from '@/shared/lib/use-modal-manager';
 import { formatAmount } from '@/shared/lib/formatters';
 import { SessionCard } from '@/widgets/session-card';
 import { useNewItemIds } from '@/shared/lib/use-animate-list';
+
+const MODAL_KEYS = ['delete', 'savePreset', 'loadPreset', 'deletePreset', 'deleteSession', 'presetAction'] as const;
 
 export function MainPage() {
   const hydrated = useHydration();
@@ -19,7 +22,6 @@ export function MainPage() {
   const { sessions, addSession, removeSession, duplicateSession, removeMemberFromSessions } = useSessionStore();
   const account = useAccountStore((s) => s.account);
 
-  // 계좌 예금주가 참여자에 없으면 자동 추가
   const initializedRef = useRef(false);
   useEffect(() => {
     if (!hydrated || initializedRef.current) return;
@@ -34,29 +36,12 @@ export function MainPage() {
   }, [hydrated, account, addMember]);
 
   const { presets, addPreset, removePreset } = usePresetStore();
+  const modal = useModalManager(MODAL_KEYS);
 
   const [newName, setNewName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-
-  // Preset modal states
-  const [showSavePresetModal, setShowSavePresetModal] = useState(false);
   const [presetName, setPresetName] = useState('');
-  const [showLoadPresetModal, setShowLoadPresetModal] = useState(false);
-  const [pendingLoadPreset, setPendingLoadPreset] = useState<MemberPreset | null>(null);
-  const [showDeletePresetModal, setShowDeletePresetModal] = useState(false);
-  const [pendingDeletePresetId, setPendingDeletePresetId] = useState<string | null>(null);
 
-  // Session delete modal states
-  const [showDeleteSessionModal, setShowDeleteSessionModal] = useState(false);
-  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
-
-  // Preset action modal states
-  const [showPresetActionModal, setShowPresetActionModal] = useState(false);
-  const [pendingActionPreset, setPendingActionPreset] = useState<MemberPreset | null>(null);
-
-  // Member edit states
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
@@ -86,8 +71,7 @@ export function MainPage() {
   };
 
   const handleRemoveMember = (id: string) => {
-    setPendingDeleteId(id);
-    setShowDeleteModal(true);
+    modal.open('delete', id);
   };
 
   const handleStartEdit = (id: string, currentName: string) => {
@@ -125,75 +109,68 @@ export function MainPage() {
   };
 
   const confirmDelete = () => {
+    const pendingDeleteId = modal.getData<string>('delete');
     if (pendingDeleteId) {
       removeMemberFromSessions(pendingDeleteId);
       removeMember(pendingDeleteId);
-      setPendingDeleteId(null);
     }
-    setShowDeleteModal(false);
+    modal.close('delete');
   };
 
-  // Preset handlers
   const handleOpenSavePreset = () => {
     setPresetName(members.map((m) => m.name).join(', '));
-    setShowSavePresetModal(true);
+    modal.open('savePreset');
   };
 
   const handleSavePreset = () => {
     const trimmed = presetName.trim();
     if (!trimmed) return;
     addPreset(trimmed, members.map((m) => m.name));
-    setShowSavePresetModal(false);
+    modal.close('savePreset');
     setPresetName('');
   };
 
-  // Session delete handlers
   const handleRemoveSession = (id: string) => {
-    setPendingDeleteSessionId(id);
-    setShowDeleteSessionModal(true);
+    modal.open('deleteSession', id);
   };
 
   const confirmDeleteSession = () => {
+    const pendingDeleteSessionId = modal.getData<string>('deleteSession');
     if (pendingDeleteSessionId) {
       removeSession(pendingDeleteSessionId);
-      setPendingDeleteSessionId(null);
     }
-    setShowDeleteSessionModal(false);
+    modal.close('deleteSession');
   };
 
-  // Preset action modal handler
   const handlePresetClick = (preset: MemberPreset) => {
-    setPendingActionPreset(preset);
-    setShowPresetActionModal(true);
+    modal.open('presetAction', preset);
   };
 
   const handleLoadPreset = (preset: MemberPreset) => {
-    setPendingLoadPreset(preset);
-    setShowLoadPresetModal(true);
+    modal.open('loadPreset', preset);
   };
 
   const confirmLoadPreset = () => {
+    const pendingLoadPreset = modal.getData<MemberPreset>('loadPreset');
     if (!pendingLoadPreset) return;
     useMemberStore.getState().reset();
     useSessionStore.getState().reset();
     for (const name of pendingLoadPreset.memberNames) {
       useMemberStore.getState().addMember(name);
     }
-    setPendingLoadPreset(null);
-    setShowLoadPresetModal(false);
+    modal.close('loadPreset');
   };
 
   const handleDeletePreset = (id: string) => {
-    setPendingDeletePresetId(id);
-    setShowDeletePresetModal(true);
+    modal.open('deletePreset', id);
   };
 
   const confirmDeletePreset = () => {
+    const pendingDeletePresetId = modal.getData<string>('deletePreset');
     if (pendingDeletePresetId) {
       removePreset(pendingDeletePresetId);
-      setPendingDeletePresetId(null);
     }
-    setShowDeletePresetModal(false);
+    modal.close('deletePreset');
   };
 
   const handleAddSession = () => {
@@ -213,11 +190,7 @@ export function MainPage() {
   const hasZeroAmountSession = sessions.some((s) => s.totalAmount === 0);
 
   if (!hydrated) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-sm text-text-muted">로딩 중...</p>
-      </div>
-    );
+    return <MainPageSkeleton />;
   }
 
   return (
@@ -409,7 +382,7 @@ export function MainPage() {
 
       {/* Calculate Button */}
       {sessions.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 pb-20">
           {/* 세션 합계 */}
           <div className="flex items-center justify-between rounded-xl bg-surface-elevated px-4 py-3">
             <span className="text-sm font-medium text-text-secondary">전체 합계</span>
@@ -422,16 +395,19 @@ export function MainPage() {
               금액이 0원인 세션이 있습니다. 정산 결과에 반영되지 않을 수 있습니다.
             </p>
           )}
-          <LinkButton href="/settlement" fullWidth size="lg" disabled={!canCalculate}>
-            정산하기
-          </LinkButton>
         </div>
       )}
 
+      <StickyBottomBar show={sessions.length > 0}>
+        <LinkButton href="/settlement" fullWidth size="lg" disabled={!canCalculate}>
+          정산하기
+        </LinkButton>
+      </StickyBottomBar>
+
       {/* Delete Confirmation Modal */}
       <Modal
-        open={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        open={modal.isOpen('delete')}
+        onClose={() => modal.close('delete')}
         title="참여자 삭제"
       >
         <p className="mb-4 text-text-secondary">
@@ -443,7 +419,7 @@ export function MainPage() {
           <Button
             variant="secondary"
             fullWidth
-            onClick={() => setShowDeleteModal(false)}
+            onClick={() => modal.close('delete')}
           >
             취소
           </Button>
@@ -455,8 +431,8 @@ export function MainPage() {
 
       {/* Save Preset Modal */}
       <Modal
-        open={showSavePresetModal}
-        onClose={() => setShowSavePresetModal(false)}
+        open={modal.isOpen('savePreset')}
+        onClose={() => modal.close('savePreset')}
         title="그룹 저장"
       >
         <p className="mb-3 text-sm text-text-secondary">
@@ -479,7 +455,7 @@ export function MainPage() {
           <Button
             variant="secondary"
             fullWidth
-            onClick={() => setShowSavePresetModal(false)}
+            onClick={() => modal.close('savePreset')}
           >
             취소
           </Button>
@@ -495,12 +471,12 @@ export function MainPage() {
 
       {/* Load Preset Confirmation Modal */}
       <Modal
-        open={showLoadPresetModal}
-        onClose={() => setShowLoadPresetModal(false)}
+        open={modal.isOpen('loadPreset')}
+        onClose={() => modal.close('loadPreset')}
         title="그룹 불러오기"
       >
         <p className="mb-4 text-text-secondary">
-          &lsquo;{pendingLoadPreset?.name}&rsquo; 그룹을 불러오시겠습니까?
+          &lsquo;{modal.getData<MemberPreset>('loadPreset')?.name}&rsquo; 그룹을 불러오시겠습니까?
           <br />
           현재 참여자 목록이 교체됩니다.
         </p>
@@ -508,7 +484,7 @@ export function MainPage() {
           <Button
             variant="secondary"
             fullWidth
-            onClick={() => setShowLoadPresetModal(false)}
+            onClick={() => modal.close('loadPreset')}
           >
             취소
           </Button>
@@ -520,8 +496,8 @@ export function MainPage() {
 
       {/* Delete Preset Confirmation Modal */}
       <Modal
-        open={showDeletePresetModal}
-        onClose={() => setShowDeletePresetModal(false)}
+        open={modal.isOpen('deletePreset')}
+        onClose={() => modal.close('deletePreset')}
         title="그룹 삭제"
       >
         <p className="mb-4 text-text-secondary">
@@ -531,7 +507,7 @@ export function MainPage() {
           <Button
             variant="secondary"
             fullWidth
-            onClick={() => setShowDeletePresetModal(false)}
+            onClick={() => modal.close('deletePreset')}
           >
             취소
           </Button>
@@ -543,8 +519,8 @@ export function MainPage() {
 
       {/* Session Delete Confirmation Modal */}
       <Modal
-        open={showDeleteSessionModal}
-        onClose={() => setShowDeleteSessionModal(false)}
+        open={modal.isOpen('deleteSession')}
+        onClose={() => modal.close('deleteSession')}
         title="세션 삭제"
       >
         <p className="mb-4 text-text-secondary">
@@ -554,7 +530,7 @@ export function MainPage() {
           <Button
             variant="secondary"
             fullWidth
-            onClick={() => setShowDeleteSessionModal(false)}
+            onClick={() => modal.close('deleteSession')}
           >
             취소
           </Button>
@@ -566,20 +542,21 @@ export function MainPage() {
 
       {/* Preset Action Modal */}
       <Modal
-        open={showPresetActionModal}
-        onClose={() => setShowPresetActionModal(false)}
-        title={pendingActionPreset?.name ?? '그룹 선택'}
+        open={modal.isOpen('presetAction')}
+        onClose={() => modal.close('presetAction')}
+        title={modal.getData<MemberPreset>('presetAction')?.name ?? '그룹 선택'}
       >
         <p className="mb-4 text-text-secondary">
-          &lsquo;{pendingActionPreset?.name}&rsquo; 그룹으로 무엇을 하시겠습니까?
+          &lsquo;{modal.getData<MemberPreset>('presetAction')?.name}&rsquo; 그룹으로 무엇을 하시겠습니까?
         </p>
         <div className="flex gap-2">
           <Button
             fullWidth
             onClick={() => {
-              if (pendingActionPreset) {
-                setShowPresetActionModal(false);
-                handleLoadPreset(pendingActionPreset);
+              const preset = modal.getData<MemberPreset>('presetAction');
+              if (preset) {
+                modal.close('presetAction');
+                handleLoadPreset(preset);
               }
             }}
           >
@@ -589,9 +566,10 @@ export function MainPage() {
             variant="danger"
             fullWidth
             onClick={() => {
-              if (pendingActionPreset) {
-                setShowPresetActionModal(false);
-                handleDeletePreset(pendingActionPreset.id);
+              const preset = modal.getData<MemberPreset>('presetAction');
+              if (preset) {
+                modal.close('presetAction');
+                handleDeletePreset(preset.id);
               }
             }}
           >

@@ -54,6 +54,7 @@ function HistoryDetail({ history }: { history: SettlementHistory }) {
       <SettlementResult
         results={history.results}
         payerName={mainPayer?.name ?? '결제자'}
+        sessions={history.sessions}
       />
     </div>
   );

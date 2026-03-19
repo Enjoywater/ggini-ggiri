@@ -14,3 +14,5 @@ export { AnimatedAmount } from './AnimatedAmount';
 export { ToastContainer } from './ToastContainer';
 export { CheckAnimation } from './CheckAnimation';
 export { TransitionLink } from './TransitionLink';
+export { StickyBottomBar } from './StickyBottomBar';
+export { Skeleton, MainPageSkeleton, SettlementPageSkeleton } from './Skeleton';

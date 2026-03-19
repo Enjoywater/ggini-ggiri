@@ -108,33 +108,43 @@ describe('useToastStore', () => {
   });
 
   describe('auto-removal', () => {
-    it('auto-removes toast after 2500ms', () => {
-      useToastStore.getState().addToast('Auto remove');
+    it('auto-removes toast after calculated duration', () => {
+      const msg = 'Auto remove';
+      // duration = min(2000 + (11/5.8)*1000, 5000) ≈ 3896ms
+      const duration = Math.min(2000 + (msg.length / 5.8) * 1000, 5000);
+      useToastStore.getState().addToast(msg);
 
       expect(useToastStore.getState().toasts).toHaveLength(1);
 
-      vi.advanceTimersByTime(2499);
+      vi.advanceTimersByTime(Math.floor(duration) - 1);
       expect(useToastStore.getState().toasts).toHaveLength(1);
 
-      vi.advanceTimersByTime(1);
+      vi.advanceTimersByTime(2);
       expect(useToastStore.getState().toasts).toHaveLength(0);
     });
 
     it('auto-removes each toast independently', () => {
-      useToastStore.getState().addToast('First');
+      const msg1 = 'First';
+      const msg2 = 'Second';
+      const dur1 = Math.min(2000 + (msg1.length / 5.8) * 1000, 5000);
+      const dur2 = Math.min(2000 + (msg2.length / 5.8) * 1000, 5000);
 
+      useToastStore.getState().addToast(msg1);
       vi.advanceTimersByTime(1000);
+      useToastStore.getState().addToast(msg2);
 
-      useToastStore.getState().addToast('Second');
+      // Just before dur1 expires, both should exist
+      vi.advanceTimersByTime(Math.floor(dur1) - 1000 - 1);
+      expect(useToastStore.getState().toasts).toHaveLength(2);
 
-      // At 2500ms, First should be removed
-      vi.advanceTimersByTime(1500);
+      // After dur1, First removed
+      vi.advanceTimersByTime(2);
       const toasts = useToastStore.getState().toasts;
       expect(toasts).toHaveLength(1);
       expect(toasts[0].message).toBe('Second');
 
-      // At 3500ms, Second should be removed
-      vi.advanceTimersByTime(1000);
+      // After dur2 from Second's creation
+      vi.advanceTimersByTime(Math.floor(dur2));
       expect(useToastStore.getState().toasts).toHaveLength(0);
     });
   });

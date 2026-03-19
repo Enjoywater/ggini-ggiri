@@ -288,13 +288,13 @@ describe('SessionCard - 술값 애니메이션', () => {
     }
   });
 
-  it('술값 영역에 aria-expanded 속성', () => {
+  it('술값 영역에 grid 애니메이션 적용', () => {
     setupMembers();
     const session = createSession();
     renderCard(session);
 
-    const expandable = document.querySelector('[aria-expanded]') as HTMLElement;
-    expect(expandable).toBeTruthy();
-    expect(expandable.getAttribute('aria-expanded')).toBe('false');
+    const gridEl = document.querySelector('.grid.transition-\\[grid-template-rows\\]') as HTMLElement;
+    expect(gridEl).toBeTruthy();
+    expect(gridEl.style.gridTemplateRows).toBe('0fr');
   });
 });

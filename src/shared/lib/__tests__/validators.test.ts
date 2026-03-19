@@ -7,7 +7,9 @@ import {
   validateAlcoholQuantity,
   validateAlcoholUnitPrice,
   validateMemberName,
+  validateSessionConsistency,
 } from '../validators';
+import type { Session, Member } from '@/shared/types';
 
 // ═══════════════════════════════════════════════════════
 // 1. 계좌번호 검증
@@ -252,5 +254,107 @@ describe('validateAlcoholUnitPrice', () => {
     const result = validateAlcoholUnitPrice(10_000_001);
     expect(result.valid).toBe(false);
     expect(result.error).toContain('1,000만원');
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// 8. 세션 논리 일관성 검증
+// ═══════════════════════════════════════════════════════
+
+describe('validateSessionConsistency', () => {
+  const members: Member[] = [
+    { id: 'm1', name: '철수' },
+    { id: 'm2', name: '영희' },
+    { id: 'm3', name: '민수' },
+  ];
+
+  const validSession: Session = {
+    id: 's1',
+    title: '1차',
+    totalAmount: 30000,
+    payerId: 'm1',
+    participantIds: ['m1', 'm2', 'm3'],
+  };
+
+  it('유효한 세션 → 통과', () => {
+    expect(validateSessionConsistency(validSession, members)).toEqual({ valid: true });
+  });
+
+  it('결제자가 참여자 목록에 없으면 → 실패', () => {
+    const session: Session = {
+      ...validSession,
+      payerId: 'm1',
+      participantIds: ['m2', 'm3'],
+    };
+    const result = validateSessionConsistency(session, members);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('결제자');
+  });
+
+  it('참여자 목록에 중복 ID → 실패', () => {
+    const session: Session = {
+      ...validSession,
+      participantIds: ['m1', 'm2', 'm2'],
+    };
+    const result = validateSessionConsistency(session, members);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('중복');
+  });
+
+  it('음주자가 참여자 목록에 없으면 → 실패', () => {
+    const session: Session = {
+      ...validSession,
+      participantIds: ['m1', 'm2'],
+      alcohol: { unitPrice: 5000, quantity: 2, drinkerIds: ['m3'] },
+    };
+    const result = validateSessionConsistency(session, members);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('음주자');
+  });
+
+  it('음주자 목록에 중복 ID → 실패', () => {
+    const session: Session = {
+      ...validSession,
+      alcohol: { unitPrice: 5000, quantity: 2, drinkerIds: ['m1', 'm1'] },
+    };
+    const result = validateSessionConsistency(session, members);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('중복');
+  });
+
+  it('주류 포함 유효한 세션 → 통과', () => {
+    const session: Session = {
+      ...validSession,
+      alcohol: { unitPrice: 5000, quantity: 2, drinkerIds: ['m1', 'm2'] },
+    };
+    expect(validateSessionConsistency(session, members)).toEqual({ valid: true });
+  });
+
+  it('참여자가 빈 배열이면 → 실패', () => {
+    const session: Session = {
+      ...validSession,
+      participantIds: [],
+    };
+    const result = validateSessionConsistency(session, members);
+    expect(result.valid).toBe(false);
+  });
+
+  it('존재하지 않는 멤버 ID가 참여자에 있으면 → 실패', () => {
+    const session: Session = {
+      ...validSession,
+      participantIds: ['m1', 'nonexistent'],
+    };
+    const result = validateSessionConsistency(session, members);
+    expect(result.valid).toBe(false);
+  });
+
+  it('주류 총액이 세션 총액을 초과하면 → 실패', () => {
+    const session: Session = {
+      ...validSession,
+      totalAmount: 10000,
+      alcohol: { unitPrice: 20000, quantity: 2, drinkerIds: ['m1'] },
+    };
+    const result = validateSessionConsistency(session, members);
+    expect(result.valid).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-export { PASTEL_COLORS, type PastelColor } from './constants';
+export { PASTEL_COLORS, type PastelColor, LIMITS } from './constants';
 export { createId } from './nanoid';
 export { formatDate, formatAmount, findMainPayer } from './formatters';
 export { compressData, decompressData, validateShareableData } from './serializer';
@@ -11,6 +11,7 @@ export {
   validateAlcoholQuantity,
   validateAlcoholUnitPrice,
   validateMemberName,
+  validateSessionConsistency,
 } from './validators';
 export {
   createAppError,
@@ -26,3 +27,4 @@ export { useNewItemIds } from './use-animate-list';
 export { useToastStore } from './toast-store';
 export { useToast } from './use-toast';
 export { navigateWithTransition } from './view-transition';
+export { useModalManager } from './use-modal-manager';

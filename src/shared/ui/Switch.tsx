@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 
 interface SwitchProps {
   checked: boolean;
@@ -12,7 +12,8 @@ interface SwitchProps {
 
 export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
   ({ checked, onChange, label, disabled = false, id }, ref) => {
-    const switchId = id || label?.replace(/\s+/g, '-').toLowerCase();
+    const generatedId = useId();
+    const switchId = id || generatedId;
 
     return (
       <div className="flex items-center gap-3">
@@ -22,7 +23,6 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
           type="button"
           role="switch"
           aria-checked={checked}
-          aria-label={label}
           disabled={disabled}
           onClick={() => onChange(!checked)}
           className={`

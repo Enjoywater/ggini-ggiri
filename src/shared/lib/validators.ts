@@ -1,3 +1,6 @@
+import type { Session, Member } from '@/shared/types';
+import { LIMITS } from './constants';
+
 interface ValidationResult {
   valid: boolean;
   error?: string;
@@ -62,7 +65,7 @@ export function validateSessionAmount(value: number): ValidationResult {
   if (value <= 0) {
     return { valid: false, error: '금액은 0보다 커야 합니다.' };
   }
-  if (value > 100_000_000) {
+  if (value > LIMITS.SESSION_AMOUNT_MAX) {
     return { valid: false, error: '금액은 1억원을 초과할 수 없습니다.' };
   }
   return { valid: true };
@@ -78,7 +81,7 @@ export function validateAlcoholQuantity(value: number): ValidationResult {
   if (value < 0) {
     return { valid: false, error: '수량은 0 이상이어야 합니다.' };
   }
-  if (value > 999) {
+  if (value > LIMITS.ALCOHOL_QUANTITY_MAX) {
     return { valid: false, error: '수량은 999개를 초과할 수 없습니다.' };
   }
   return { valid: true };
@@ -94,9 +97,94 @@ export function validateAlcoholUnitPrice(value: number): ValidationResult {
   if (value < 0) {
     return { valid: false, error: '단가는 0 이상이어야 합니다.' };
   }
-  if (value > 10_000_000) {
+  if (value > LIMITS.ALCOHOL_UNIT_PRICE_MAX) {
     return { valid: false, error: '단가는 1,000만원을 초과할 수 없습니다.' };
   }
+  return { valid: true };
+}
+
+// ── 세션 논리 일관성 검증 ──
+
+export function validateSessionConsistency(
+  session: Session,
+  members: Member[],
+): ValidationResult {
+  const memberIds = new Set(members.map((m) => m.id));
+
+  // participantIds 최소 1명 검사 (0명이면 정산 시 division-by-zero)
+  if (!Array.isArray(session.participantIds) || session.participantIds.length === 0) {
+    return {
+      valid: false,
+      error: '참여자가 최소 1명 이상이어야 합니다.',
+    };
+  }
+
+  // payerId가 participantIds에 포함되어야 함
+  if (!session.participantIds.includes(session.payerId)) {
+    return {
+      valid: false,
+      error: '결제자가 참여자 목록에 포함되어 있지 않습니다.',
+    };
+  }
+
+  // participantIds 중복 검사
+  const participantSet = new Set(session.participantIds);
+  if (participantSet.size !== session.participantIds.length) {
+    return {
+      valid: false,
+      error: '참여자 목록에 중복된 ID가 있습니다.',
+    };
+  }
+
+  // participantIds가 유효한 멤버인지 검사
+  for (const pid of session.participantIds) {
+    if (!memberIds.has(pid)) {
+      return {
+        valid: false,
+        error: '참여자 목록에 존재하지 않는 멤버가 포함되어 있습니다.',
+      };
+    }
+  }
+
+  // 주류 관련 검증
+  if (session.alcohol) {
+    // drinkerIds가 있을 때 최소 1명 검사 (0명이면 division-by-zero)
+    if (!Array.isArray(session.alcohol.drinkerIds) || session.alcohol.drinkerIds.length === 0) {
+      return {
+        valid: false,
+        error: '주류 정보가 있는 경우 음주자가 최소 1명 이상이어야 합니다.',
+      };
+    }
+
+    // drinkerIds 중복 검사
+    const drinkerSet = new Set(session.alcohol.drinkerIds);
+    if (drinkerSet.size !== session.alcohol.drinkerIds.length) {
+      return {
+        valid: false,
+        error: '음주자 목록에 중복된 ID가 있습니다.',
+      };
+    }
+
+    // 모든 drinkerIds가 participantIds에 포함되어야 함
+    for (const did of session.alcohol.drinkerIds) {
+      if (!session.participantIds.includes(did)) {
+        return {
+          valid: false,
+          error: '음주자 목록에 참여자가 아닌 멤버가 포함되어 있습니다.',
+        };
+      }
+    }
+
+    // 주류 총액이 세션 총액을 초과하는지 검사
+    const alcoholTotal = session.alcohol.unitPrice * session.alcohol.quantity;
+    if (alcoholTotal > session.totalAmount) {
+      return {
+        valid: false,
+        error: '주류 총액이 세션 총액을 초과할 수 없습니다.',
+      };
+    }
+  }
+
   return { valid: true };
 }
 
@@ -106,7 +194,7 @@ export function validateMemberName(value: string): ValidationResult {
   if (!value || value.trim().length === 0) {
     return { valid: false, error: '이름을 입력해주세요.' };
   }
-  if (value.trim().length > 10) {
+  if (value.trim().length > LIMITS.MEMBER_NAME_MAX_LENGTH) {
     return { valid: false, error: '이름은 10자 이내로 입력해주세요.' };
   }
   // 한글, 영문, 숫자, 공백만 허용

@@ -202,12 +202,12 @@ describe('Accessibility', () => {
       expect(onChange).toHaveBeenCalledWith(true);
     });
 
-    it('has correct aria-label', () => {
+    it('has accessible name via label element', () => {
       render(<Switch checked={false} onChange={() => {}} label="Dark mode" />);
-      expect(screen.getByRole('switch')).toHaveAttribute(
-        'aria-label',
-        'Dark mode',
-      );
+      const switchEl = screen.getByRole('switch');
+      const labelEl = screen.getByText('Dark mode');
+      expect(labelEl.tagName).toBe('LABEL');
+      expect(labelEl).toHaveAttribute('for', switchEl.id);
     });
   });
 });

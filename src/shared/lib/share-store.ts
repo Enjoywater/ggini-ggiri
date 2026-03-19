@@ -12,6 +12,12 @@ export async function saveShare(data: ShareableData, id?: string): Promise<strin
     throw new Error('공유 기능이 비활성화되어 있습니다.');
   }
 
+  try {
+    validateShareableData(data);
+  } catch {
+    throw new Error('유효하지 않은 정산 데이터입니다.');
+  }
+
   const serialized = JSON.stringify(data);
   if (serialized.length > MAX_SHARE_SIZE) {
     throw new Error('정산 데이터가 너무 큽니다. 세션 수를 줄여주세요.');
