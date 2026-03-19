@@ -232,6 +232,7 @@ export function SettlementPage() {
         results={results}
         payerName={mainPayer?.name ?? '결제자'}
         sessions={sessions}
+        members={members}
       />
 
       {/* Account Notice */}

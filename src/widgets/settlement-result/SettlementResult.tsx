@@ -4,13 +4,39 @@ import { useMemo, useState } from 'react';
 import { Card, Button, AnimatedAmount } from '@/shared/ui';
 import { useAccountStore } from '@/entities/account';
 import { useToast } from '@/shared/lib/use-toast';
-import type { SettlementResult as SettlementResultType, Session, SessionSettlement } from '@/shared/types';
+import { PASTEL_COLORS } from '@/shared/lib';
+import type { PastelColor } from '@/shared/lib/constants';
+import type { SettlementResult as SettlementResultType, Session, SessionSettlement, Member } from '@/shared/types';
 
 interface SettlementResultProps {
   results: SettlementResultType[];
   payerName: string;
   sessions?: Session[];
+  members?: Member[];
 }
+
+const tintStyleMap: Record<PastelColor, { bg: React.CSSProperties; dot: React.CSSProperties }> = {
+  pink: {
+    bg: { backgroundColor: 'color-mix(in srgb, var(--pastel-pink) 15%, transparent)' },
+    dot: { backgroundColor: 'var(--pastel-pink-dark)' },
+  },
+  lavender: {
+    bg: { backgroundColor: 'color-mix(in srgb, var(--pastel-lavender) 15%, transparent)' },
+    dot: { backgroundColor: 'var(--pastel-lavender-dark)' },
+  },
+  mint: {
+    bg: { backgroundColor: 'color-mix(in srgb, var(--pastel-mint) 15%, transparent)' },
+    dot: { backgroundColor: 'var(--pastel-mint-dark)' },
+  },
+  sky: {
+    bg: { backgroundColor: 'color-mix(in srgb, var(--pastel-sky) 15%, transparent)' },
+    dot: { backgroundColor: 'var(--pastel-sky-dark)' },
+  },
+  peach: {
+    bg: { backgroundColor: 'color-mix(in srgb, var(--pastel-peach) 15%, transparent)' },
+    dot: { backgroundColor: 'var(--pastel-peach-dark)' },
+  },
+};
 
 /** 세션 데이터에서 해당 세션의 계산 근거 문자열을 생성 */
 function buildFormulaLines(detail: SessionSettlement, session: Session | undefined): string[] {
@@ -39,10 +65,20 @@ function buildFormulaLines(detail: SessionSettlement, session: Session | undefin
   return lines;
 }
 
-export function SettlementResult({ results, payerName, sessions }: SettlementResultProps) {
+export function SettlementResult({ results, payerName, sessions, members }: SettlementResultProps) {
   const account = useAccountStore((s) => s.account);
   const toast = useToast();
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
+
+  const tintMap = useMemo(() => {
+    const map = new Map<string, PastelColor>();
+    if (members) {
+      members.forEach((m, i) => {
+        map.set(m.id, PASTEL_COLORS[i % PASTEL_COLORS.length]);
+      });
+    }
+    return map;
+  }, [members]);
 
   const toggleExpanded = (memberId: string) => {
     setExpandedMap((prev) => ({ ...prev, [memberId]: !prev[memberId] }));
@@ -78,11 +114,20 @@ export function SettlementResult({ results, payerName, sessions }: SettlementRes
             개인별 정산 내역
           </h3>
           {positiveResults.map((result, index) => (
-            <Card key={result.memberId} className="flex flex-col gap-3 animate-fade-up" style={{ animationDelay: `${(index + 1) * 80}ms` }}>
+            <Card key={result.memberId} className="flex flex-col gap-3 animate-fade-up" style={{ animationDelay: `${(index + 1) * 80}ms`, ...(tintMap.has(result.memberId) ? tintStyleMap[tintMap.get(result.memberId)!].bg : {}) }}>
               <div className="flex items-center justify-between">
-                <span className="text-base font-semibold text-text-primary">
-                  {result.memberName}
-                </span>
+                <div className="flex items-center gap-2">
+                  {tintMap.has(result.memberId) && (
+                    <span
+                      className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                      style={tintStyleMap[tintMap.get(result.memberId)!].dot}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="text-base font-semibold text-text-primary">
+                    {result.memberName}
+                  </span>
+                </div>
                 <AnimatedAmount amount={result.totalAmount} duration={400} className="text-lg font-bold text-primary-dark" />
               </div>
 
