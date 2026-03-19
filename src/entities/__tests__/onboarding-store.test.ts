@@ -64,4 +64,22 @@ describe('onboarding store', () => {
     // currentStep should be the first incomplete step
     expect(useOnboardingStore.getState().currentStep).toBe('add-member');
   });
+
+  it('persist 키가 ggini-onboarding-storage로 설정', () => {
+    // persist middleware에 의해 localStorage에 저장
+    useOnboardingStore.getState().completeStep('add-member');
+    const stored = localStorage.getItem('ggini-onboarding-storage');
+    expect(stored).toBeTruthy();
+    const parsed = JSON.parse(stored!);
+    expect(parsed.state.completedSteps).toContain('add-member');
+  });
+
+  it('모든 스텝 완료 후 currentStep이 null', () => {
+    const steps = ['add-member', 'add-session', 'enter-amount', 'settle'] as const;
+    for (const step of steps) {
+      useOnboardingStore.getState().completeStep(step);
+    }
+    expect(useOnboardingStore.getState().currentStep).toBeNull();
+    expect(useOnboardingStore.getState().completedSteps).toHaveLength(4);
+  });
 });

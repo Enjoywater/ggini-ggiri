@@ -53,7 +53,7 @@ describe('SessionCard - 기본 렌더링', () => {
     expect(screen.getByText('고기집')).toBeInTheDocument();
   });
 
-  it('제목 없으면 인덱스 기반 표시', () => {
+  it('제목 없으면 Chip 배지에 차수 표시', () => {
     setupMembers();
     const session = createSession({ title: '' });
     renderCard(session, 2);
@@ -296,5 +296,59 @@ describe('SessionCard - 술값 애니메이션', () => {
     const gridEl = document.querySelector('.grid.transition-\\[grid-template-rows\\]') as HTMLElement;
     expect(gridEl).toBeTruthy();
     expect(gridEl.style.gridTemplateRows).toBe('0fr');
+  });
+});
+
+// ── Badge & Stripe ──────────────────────────────────
+
+describe('SessionCard - 차수 배지 및 컬러 스트라이프', () => {
+  it('차수 배지 Chip이 role="status"로 렌더링', () => {
+    setupMembers();
+    const session = createSession({ title: '고기집' });
+    renderCard(session, 0);
+    const badge = screen.getByRole('status');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent('1차');
+  });
+
+  it('제목이 있으면 배지와 제목이 분리 표시', () => {
+    setupMembers();
+    const session = createSession({ title: '고기집' });
+    renderCard(session, 0);
+    expect(screen.getByRole('status')).toHaveTextContent('1차');
+    expect(screen.getByText('고기집')).toBeInTheDocument();
+  });
+
+  it('인덱스에 따라 배지 번호 증가', () => {
+    setupMembers();
+    const session = createSession({ title: '' });
+    renderCard(session, 4);
+    expect(screen.getByRole('status')).toHaveTextContent('5차');
+  });
+
+  it('Card에 accentColor에 의한 좌측 보더 적용', () => {
+    setupMembers();
+    const session = createSession();
+    const { container } = renderCard(session, 0);
+    // index 0 → PASTEL_COLORS[0] = 'pink' → border-l-pastel-pink-dark
+    const card = container.querySelector('.border-l-4');
+    expect(card).toBeInTheDocument();
+  });
+
+  it('5개 이상 세션에서 컬러가 순환', () => {
+    setupMembers();
+    const session = createSession();
+    const { container } = renderCard(session, 5);
+    // index 5 % 5 = 0 → 'pink' again
+    const card = container.querySelector('.border-l-pastel-pink-dark');
+    expect(card).toBeInTheDocument();
+  });
+
+  it('배지 Chip은 pointer-events-none으로 클릭 불가', () => {
+    setupMembers();
+    const session = createSession();
+    renderCard(session, 0);
+    const badge = screen.getByRole('status');
+    expect(badge.className).toContain('pointer-events-none');
   });
 });

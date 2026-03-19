@@ -62,16 +62,40 @@ describe('SettlementResult', () => {
     const { container } = render(
       <SettlementResult results={mockResults} payerName="결제자" members={mockMembers} />
     );
-    // When members are provided, each result card's color dot should have a background-color style
     const dots = container.querySelectorAll('[aria-hidden="true"].rounded-full');
     expect(dots.length).toBe(2);
-    // First member gets 'pink' color, second gets 'lavender'
     const firstDot = dots[0] as HTMLElement;
     const secondDot = dots[1] as HTMLElement;
-    // jsdom may not parse CSS custom properties, but the style attribute should be set
     expect(firstDot.getAttribute('style')).toBeTruthy();
     expect(secondDot.getAttribute('style')).toBeTruthy();
-    // Verify different dots have different styles (different colors assigned)
     expect(firstDot.getAttribute('style')).not.toBe(secondDot.getAttribute('style'));
+  });
+
+  it('색상 도트에 올바른 크기 클래스 적용', () => {
+    const { container } = render(
+      <SettlementResult results={mockResults} payerName="결제자" members={mockMembers} />
+    );
+    const dots = container.querySelectorAll('[aria-hidden="true"].rounded-full');
+    for (const dot of dots) {
+      expect(dot.className).toContain('h-3');
+      expect(dot.className).toContain('w-3');
+    }
+  });
+
+  it('멤버별 도트 색상이 PASTEL_COLORS 순서와 일치', () => {
+    const { container } = render(
+      <SettlementResult results={mockResults} payerName="결제자" members={mockMembers} />
+    );
+    const dots = container.querySelectorAll('[aria-hidden="true"].rounded-full');
+    // m1=홍길동 → index 0 → pink, m2=김철수 → index 1 → lavender
+    const firstStyle = (dots[0] as HTMLElement).getAttribute('style') ?? '';
+    const secondStyle = (dots[1] as HTMLElement).getAttribute('style') ?? '';
+    expect(firstStyle).toContain('--pastel-pink-dark');
+    expect(secondStyle).toContain('--pastel-lavender-dark');
+  });
+
+  it('결과 없을 때 빈 상태 메시지 표시', () => {
+    render(<SettlementResult results={[]} payerName="결제자" />);
+    expect(screen.getByText('정산할 내역이 없습니다')).toBeInTheDocument();
   });
 });

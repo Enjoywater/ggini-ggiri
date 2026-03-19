@@ -6,6 +6,7 @@ import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
 import { usePresetStore } from '@/entities/preset';
+import { useOnboardingStore } from '@/entities/onboarding';
 
 // ── Mocks ────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ beforeEach(() => {
   useSessionStore.getState().reset();
   useAccountStore.getState().clearAccount();
   usePresetStore.getState().reset();
+  useOnboardingStore.getState().reset();
   mockUseHydration.mockReturnValue(true);
 });
 
@@ -475,5 +477,42 @@ describe('MainPage - 애니메이션', () => {
     render(<MainPage />);
     const emptyText = screen.getByText('+ 추가 버튼으로 N차를 추가하세요');
     expect(emptyText.className).toContain('animate-breathing');
+  });
+});
+
+// ── Onboarding ─────────────────────────────────────
+
+describe('MainPage - 온보딩 통합', () => {
+  it('초기 상태에서 add-member 온보딩 tooltip 표시', () => {
+    render(<MainPage />);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    expect(screen.getByText('먼저 참여자를 추가해 보세요!')).toBeInTheDocument();
+  });
+
+  it('건너뛰기 클릭 시 tooltip 사라짐', async () => {
+    const user = userEvent.setup();
+    render(<MainPage />);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    await user.click(screen.getByText('건너뛰기'));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(useOnboardingStore.getState().dismissed).toBe(true);
+  });
+
+  it('참여자 추가 후 add-session tooltip으로 전환', async () => {
+    const user = userEvent.setup();
+    render(<MainPage />);
+
+    const input = screen.getByLabelText('참여자 이름 입력');
+    await user.type(input, '앨리스{Enter}');
+    await user.type(input, '밥{Enter}');
+
+    expect(screen.getByText('N차를 추가해 보세요!')).toBeInTheDocument();
+  });
+
+  it('dismissed 상태에서는 tooltip 미표시', () => {
+    useOnboardingStore.getState().dismiss();
+    render(<MainPage />);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 });

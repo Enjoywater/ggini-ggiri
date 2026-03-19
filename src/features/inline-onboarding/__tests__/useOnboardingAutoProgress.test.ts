@@ -78,4 +78,44 @@ describe('useOnboardingAutoProgress', () => {
 
     expect(useOnboardingStore.getState().completedSteps).toEqual([]);
   });
+
+  it('여러 조건 동시 충족 시 모든 스텝 완료', () => {
+    act(() => {
+      useMemberStore.getState().addMember('홍길동');
+      const members = useMemberStore.getState().members;
+      useSessionStore.getState().addSession({
+        title: '1차',
+        totalAmount: 50000,
+        payerId: members[0].id,
+        participantIds: [members[0].id],
+      });
+    });
+
+    renderHook(() => useOnboardingAutoProgress());
+
+    const { completedSteps } = useOnboardingStore.getState();
+    expect(completedSteps).toContain('add-member');
+    expect(completedSteps).toContain('add-session');
+    expect(completedSteps).toContain('enter-amount');
+  });
+
+  it('금액 0인 세션은 enter-amount 완료하지 않음', () => {
+    act(() => {
+      useMemberStore.getState().addMember('홍길동');
+      const members = useMemberStore.getState().members;
+      useSessionStore.getState().addSession({
+        title: '1차',
+        totalAmount: 0,
+        payerId: members[0].id,
+        participantIds: [members[0].id],
+      });
+    });
+
+    renderHook(() => useOnboardingAutoProgress());
+
+    const { completedSteps } = useOnboardingStore.getState();
+    expect(completedSteps).toContain('add-member');
+    expect(completedSteps).toContain('add-session');
+    expect(completedSteps).not.toContain('enter-amount');
+  });
 });

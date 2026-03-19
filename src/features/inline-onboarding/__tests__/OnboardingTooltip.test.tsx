@@ -72,4 +72,33 @@ describe('OnboardingTooltip', () => {
     const tooltip = screen.getByRole('tooltip');
     expect(tooltip.className).toContain('top-full');
   });
+
+  it('tooltip에 animate-spring-in 애니메이션 적용', () => {
+    render(
+      <OnboardingTooltip step="add-member" currentStep="add-member" message="msg" onDismiss={vi.fn()}>
+        <button>추가</button>
+      </OnboardingTooltip>
+    );
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip.className).toContain('animate-spring-in');
+  });
+
+  it('tooltip에 z-50 스태킹 컨텍스트 적용', () => {
+    render(
+      <OnboardingTooltip step="add-member" currentStep="add-member" message="msg" onDismiss={vi.fn()}>
+        <button>추가</button>
+      </OnboardingTooltip>
+    );
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip.className).toContain('z-50');
+  });
+
+  it('건너뛰기 버튼이 tooltip 내부에 렌더링', () => {
+    render(
+      <OnboardingTooltip step="add-member" currentStep="add-member" message="msg" onDismiss={vi.fn()}>
+        <button>추가</button>
+      </OnboardingTooltip>
+    );
+    expect(screen.getByText('건너뛰기')).toBeInTheDocument();
+  });
 });
