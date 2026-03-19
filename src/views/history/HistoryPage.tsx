@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, LinkButton, Card, Modal } from '@/shared/ui';
+import { Button, LinkButton, Card, Modal, EmptyState } from '@/shared/ui';
 import { useHistoryStore } from '@/entities/history';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { SettlementResult } from '@/widgets/settlement-result';
@@ -105,8 +105,8 @@ export function HistoryPage() {
 
       {/* History List */}
       {histories.length === 0 ? (
-        <Card className="text-center py-8">
-          <p className="text-text-muted animate-breathing">아직 정산 기록이 없습니다</p>
+        <Card className="text-center">
+          <EmptyState illustration="history" message="아직 정산 기록이 없습니다" />
         </Card>
       ) : (
         <div className="flex flex-col gap-3">

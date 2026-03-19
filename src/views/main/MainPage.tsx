@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button, LinkButton, Input, Card, Chip, Modal, StickyBottomBar, MainPageSkeleton } from '@/shared/ui';
+import { Button, LinkButton, Input, Card, Chip, Modal, StickyBottomBar, MainPageSkeleton, EmptyState } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
@@ -290,9 +290,7 @@ export function MainPage() {
         )}
 
         {members.length === 0 && (
-          <p className="text-sm text-text-muted text-center py-4 animate-breathing">
-            모임 참여자를 추가해 주세요
-          </p>
+          <EmptyState illustration="members" message="모임 참여자를 추가해 주세요" />
         )}
       </Card>
 
@@ -355,12 +353,11 @@ export function MainPage() {
         </div>
 
         {sessions.length === 0 && (
-          <Card className="text-center py-8">
-            <p className="text-text-muted animate-breathing">
-              {members.length === 0
-                ? '먼저 참여자를 추가해 주세요'
-                : '+ 추가 버튼으로 N차를 추가하세요'}
-            </p>
+          <Card className="text-center">
+            <EmptyState
+              illustration="sessions"
+              message={members.length === 0 ? '먼저 참여자를 추가해 주세요' : '+ 추가 버튼으로 N차를 추가하세요'}
+            />
           </Card>
         )}
 
