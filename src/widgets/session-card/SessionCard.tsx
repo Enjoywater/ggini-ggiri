@@ -147,9 +147,19 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
   };
 
   return (
-    <Card className="relative">
+    <Card className="relative" accentColor={PASTEL_COLORS[index % PASTEL_COLORS.length]}>
       <CardHeader className="flex items-center justify-between">
-        <CardTitle>{session.title || `${index + 1}차`}</CardTitle>
+        <div className="flex items-center gap-2">
+          <Chip
+            color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
+            selected
+            role="status"
+            className="text-xs px-2 py-0.5 pointer-events-none"
+          >
+            {index + 1}차
+          </Chip>
+          <CardTitle>{session.title}</CardTitle>
+        </div>
         <div className="flex gap-1">
           {onDuplicate && (
             <Button

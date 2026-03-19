@@ -18,6 +18,26 @@ describe('Card', () => {
     render(<Card data-testid="my-card">Content</Card>);
     expect(screen.getByTestId('my-card')).toBeInTheDocument();
   });
+
+  it('renders without accent when accentColor is not provided', () => {
+    const { container } = render(<Card>Content</Card>);
+    expect(container.firstElementChild!.className).not.toContain('border-l-4');
+  });
+
+  it('applies accent border class when accentColor is provided', () => {
+    const { container } = render(<Card accentColor="pink">Content</Card>);
+    expect(container.firstElementChild!.className).toContain('border-l-4');
+    expect(container.firstElementChild!.className).toContain('border-l-pastel-pink-dark');
+  });
+
+  it('applies correct accent for each color', () => {
+    const colors = ['pink', 'lavender', 'mint', 'sky', 'peach'] as const;
+    for (const color of colors) {
+      const { container } = render(<Card accentColor={color}>Content</Card>);
+      expect(container.firstElementChild!.className).toContain(`border-l-pastel-${color}-dark`);
+      container.remove();
+    }
+  });
 });
 
 describe('CardHeader', () => {
