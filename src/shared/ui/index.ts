@@ -16,3 +16,4 @@ export { CheckAnimation } from './CheckAnimation';
 export { TransitionLink } from './TransitionLink';
 export { StickyBottomBar } from './StickyBottomBar';
 export { Skeleton, MainPageSkeleton, SettlementPageSkeleton } from './Skeleton';
+export { EmptyState } from './EmptyState';
