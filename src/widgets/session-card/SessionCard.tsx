@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, Input, Chip, Switch, Button, FormField } f
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { validateSessionAmount, validateAlcoholUnitPrice, validateAlcoholQuantity } from '@/shared/lib/validators';
-import { PASTEL_COLORS } from '@/shared/lib';
+import { PASTEL_COLORS, formatAmountPlain } from '@/shared/lib';
 import type { Session } from '@/shared/types';
 
 interface SessionCardProps {
@@ -142,8 +142,8 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
     });
   };
 
-  const formatAmount = (amount: number) => {
-    return amount > 0 ? amount.toLocaleString('ko-KR') : '';
+  const formatInputAmount = (amount: number) => {
+    return amount > 0 ? formatAmountPlain(amount) : '';
   };
 
   return (
@@ -199,7 +199,7 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
             inputMode="numeric"
             placeholder="0"
             suffix="원"
-            value={formatAmount(session.totalAmount)}
+            value={formatInputAmount(session.totalAmount)}
             onChange={(e) => handleAmountChange(e.target.value)}
             onBlur={handleAmountBlur}
           />
@@ -306,7 +306,7 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
                       inputMode="numeric"
                       placeholder="0"
                       suffix="원"
-                      value={formatAmount(session.alcohol?.unitPrice ?? 0)}
+                      value={formatInputAmount(session.alcohol?.unitPrice ?? 0)}
                       onChange={(e) => handleAlcoholUnitPrice(e.target.value)}
                       onBlur={handleUnitPriceBlur}
                     />
@@ -364,7 +364,7 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
                   const alcoholTotal = (session.alcohol?.unitPrice ?? 0) * (session.alcohol?.quantity ?? 0);
                   return alcoholTotal > 0 && session.totalAmount > 0 && alcoholTotal > session.totalAmount ? (
                     <p className="text-xs text-warning-dark">
-                      주류 합계({alcoholTotal.toLocaleString('ko-KR')}원)가 총 금액({session.totalAmount.toLocaleString('ko-KR')}원)을 초과합니다.
+                      주류 합계({formatAmountPlain(alcoholTotal)}원)가 총 금액({formatAmountPlain(session.totalAmount)}원)을 초과합니다.
                     </p>
                   ) : null;
                 })()}

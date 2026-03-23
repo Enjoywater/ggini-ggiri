@@ -1,6 +1,6 @@
 export { PASTEL_COLORS, type PastelColor, LIMITS } from './constants';
 export { createId } from './nanoid';
-export { formatDate, formatAmount, findMainPayer } from './formatters';
+export { formatDate, formatAmount, formatAmountPlain, findMainPayer } from './formatters';
 export { compressData, decompressData, validateShareableData } from './serializer';
 export type { ShareableData } from './serializer';
 export {

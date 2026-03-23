@@ -1,5 +1,6 @@
 import type { Transfer } from '@/features/calculate';
 import type { Member, Session, SettlementResult, UserAccount } from '@/shared/types';
+import { formatAmount } from '@/shared/lib';
 
 interface TextShareOptions {
   transfers: Transfer[];
@@ -31,7 +32,7 @@ export function buildSettlementText({
     lines.push('', '[세션별 내역]');
     for (const session of sessions) {
       const payerName = memberMap.get(session.payerId) ?? '?';
-      lines.push(`${session.title} ${session.totalAmount.toLocaleString('ko-KR')}원 (결제: ${payerName})`);
+      lines.push(`${session.title} ${formatAmount(session.totalAmount)} (결제: ${payerName})`);
     }
   }
 
@@ -39,7 +40,7 @@ export function buildSettlementText({
   if (results && results.length > 0) {
     lines.push('', '[개인별 부담액]');
     for (const r of results) {
-      lines.push(`${r.memberName}: ${r.totalAmount.toLocaleString('ko-KR')}원`);
+      lines.push(`${r.memberName}: ${formatAmount(r.totalAmount)}`);
     }
   }
 
@@ -48,7 +49,7 @@ export function buildSettlementText({
     '[송금 요약]',
     ...transfers.map(
       (t) =>
-        `${memberMap.get(t.from) ?? '?'} → ${memberMap.get(t.to) ?? '?'} : ${t.amount.toLocaleString('ko-KR')}원`,
+        `${memberMap.get(t.from) ?? '?'} → ${memberMap.get(t.to) ?? '?'} : ${formatAmount(t.amount)}`,
     ),
   );
 

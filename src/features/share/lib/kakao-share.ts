@@ -3,6 +3,7 @@ import { loadKakaoSDK, isKakaoSDKReady } from '@/shared/lib/kakao-sdk';
 import { saveShare } from '@/shared/lib/share-store';
 import type { ShareableData } from '@/shared/lib/serializer';
 import type { UserAccount, Member } from '@/shared/types';
+import { formatAmount } from '@/shared/lib';
 import type { Transfer } from '@/features/calculate';
 
 const APP_URL_BASE = typeof window !== 'undefined'
@@ -44,7 +45,7 @@ export async function shareToKakao({
   for (const t of transfers) {
     const from = memberMap.get(t.from) ?? '?';
     const to = memberMap.get(t.to) ?? '?';
-    lines.push(`${from} → ${to} : ${t.amount.toLocaleString('ko-KR')}원`);
+    lines.push(`${from} → ${to} : ${formatAmount(t.amount)}`);
   }
 
   if (account) {

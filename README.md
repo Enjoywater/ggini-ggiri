@@ -123,7 +123,7 @@ Vercel에 배포 중이며, 환경변수 설정이 필요합니다:
 - 스타일: Tailwind CSS v4
 - UI: LinkButton, Modal (useId, X 닫기, dvh 스크롤), Chip (role 분리), StickyBottomBar, Skeleton
 - PWA: manifest.json + Service Worker
-- 테스트: Vitest (678 tests, 50 files)
+- 테스트: Vitest (767 tests, 58 files)
 - 보안 헤더: vercel.json (CSP, X-Frame-Options, Permissions-Policy 등)
 
 ## 6) 아키텍처
@@ -176,14 +176,14 @@ src/
 
 ## 8) 테스트 범위
 
-현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 678개 테스트, 50개 파일)
+현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 767개 테스트, 58개 파일)
 
 - 정산 엔진 (`settlement-engine`, edge cases, settle/calculateBalance 정합성)
 - 공유/직렬화 (`text-share` 세션별 내역 포함, `serializer`)
 - 스토어 무결성 (`store-integrity`, `history-store`, `preset-store`)
 - 세션 복제 동작 (`session-duplication`)
 - UI 상태 동기화 (`alcohol-sync`)
-- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`, `FormField`, `AnimatedAmount`, `CheckAnimation`, `ToastContainer`, `StickyBottomBar`, `Skeleton`)
+- UI 컴포넌트 (`Button`, `Input`, `Card`, `Chip`, `Switch`, `Modal`, `ErrorBoundary`, `FormField`, `AnimatedAmount`, `CheckAnimation`, `ToastContainer`, `StickyBottomBar`, `Skeleton`, `LinkButton`)
 - Export/Import (`validate`, `export`, `import`, `ExportImportButtons` — 스키마 검증, 보안 필터링, UI)
 - 접근성 (`accessibility` — ARIA 속성, 포커스 트랩, 키보드 네비게이션, label 연결)
 - 유효성 검증 (`validators` — 계좌번호, 금액, 멤버명, 주류 수량/단가, 세션 논리 일관성)
@@ -199,6 +199,8 @@ src/
 - 애니메이션 훅 (`use-reduced-motion`, `use-animated-number`, `use-animate-list` — 모션 감지, rAF 보간, 리스트 추가 감지)
 - 토스트 시스템 (`toast-store`, `use-toast`, `ToastContainer` — 추가/제거/자동만료, 접근성, Portal 렌더링)
 - 네비게이션 (`view-transition` — 페이지 depth, slide-back, API fallback)
+- 공유 상세 페이지 (`DetailPage` — URL 압축 해제, Supabase ID 로딩, 에러 상태, 멤버 매핑)
+- 포매터 (`formatters` — 금액 포맷, 날짜 포맷, 로케일 처리)
 
 ## 9) 개발 메모
 

@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, Button, AnimatedAmount } from '@/shared/ui';
 import { useAccountStore } from '@/entities/account';
 import { useToast } from '@/shared/lib/use-toast';
-import { PASTEL_COLORS } from '@/shared/lib';
+import { PASTEL_COLORS, formatAmountPlain } from '@/shared/lib';
 import type { PastelColor } from '@/shared/lib/constants';
 import type { SettlementResult as SettlementResultType, Session, SessionSettlement, Member } from '@/shared/types';
 
@@ -50,13 +50,13 @@ function buildFormulaLines(detail: SessionSettlement, session: Session | undefin
   const participantCount = session.participantIds.length;
 
   lines.push(
-    `기본 = (총액 ${session.totalAmount.toLocaleString('ko-KR')}원 - 주류 ${clampedAlcoholTotal.toLocaleString('ko-KR')}원) ÷ ${participantCount}명 = ${detail.baseAmount.toLocaleString('ko-KR')}원`,
+    `기본 = (총액 ${formatAmountPlain(session.totalAmount)}원 - 주류 ${formatAmountPlain(clampedAlcoholTotal)}원) ÷ ${participantCount}명 = ${formatAmountPlain(detail.baseAmount)}원`,
   );
 
   if (detail.alcoholAmount > 0 && session.alcohol) {
     const drinkerCount = session.alcohol.drinkerIds.length;
     lines.push(
-      `주류 = ${clampedAlcoholTotal.toLocaleString('ko-KR')}원 ÷ ${drinkerCount}명 = ${detail.alcoholAmount.toLocaleString('ko-KR')}원`,
+      `주류 = ${formatAmountPlain(clampedAlcoholTotal)}원 ÷ ${drinkerCount}명 = ${formatAmountPlain(detail.alcoholAmount)}원`,
     );
   }
 
@@ -65,7 +65,7 @@ function buildFormulaLines(detail: SessionSettlement, session: Session | undefin
   return lines;
 }
 
-export function SettlementResult({ results, payerName, sessions, members }: SettlementResultProps) {
+function SettlementResultInner({ results, payerName, sessions, members }: SettlementResultProps) {
   const account = useAccountStore((s) => s.account);
   const toast = useToast();
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
@@ -139,9 +139,9 @@ export function SettlementResult({ results, payerName, sessions, members }: Sett
                       <div className="flex justify-between">
                         <span>{detail.sessionTitle}</span>
                         <span>
-                          {detail.baseAmount.toLocaleString('ko-KR')}
+                          {formatAmountPlain(detail.baseAmount)}
                           {detail.alcoholAmount > 0 &&
-                            ` + 주류 ${detail.alcoholAmount.toLocaleString('ko-KR')}`}
+                            ` + 주류 ${formatAmountPlain(detail.alcoholAmount)}`}
                           원
                         </span>
                       </div>
@@ -214,3 +214,5 @@ export function SettlementResult({ results, payerName, sessions, members }: Sett
     </div>
   );
 }
+
+export const SettlementResult = React.memo(SettlementResultInner);
