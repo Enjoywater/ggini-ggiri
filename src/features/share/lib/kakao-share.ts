@@ -58,6 +58,7 @@ export async function shareToKakao({
     content: {
       title: `끼니끼리 정산 | 총 ${totalLabel}`,
       description: lines.join('\n'),
+      imageUrl: `${APP_URL_BASE}/icons/icon-512.png`,
       link: {
         mobileWebUrl: detailUrl,
         webUrl: detailUrl,
