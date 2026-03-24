@@ -159,6 +159,13 @@ describe('serializer: 계좌 정보 보안', () => {
     const compressed = compressData(data as unknown as ShareableData);
     expect(() => decompressData(compressed)).toThrow('보안 위반');
   });
+
+  it('ownerName 포함 데이터 → 에러', () => {
+    const data = makeValidData() as unknown as Record<string, unknown>;
+    (data as { owner?: unknown }).owner = { ownerName: '앨리스' };
+    const compressed = compressData(data as unknown as ShareableData);
+    expect(() => decompressData(compressed)).toThrow('보안 위반');
+  });
 });
 
 // ═══════════════════════════════════════════════════════

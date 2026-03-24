@@ -259,6 +259,22 @@ describe('SessionCard - 술값 별도 정산', () => {
     const updated = useSessionStore.getState().sessions[0];
     expect(updated.alcohol!.drinkerIds).toHaveLength(3);
   });
+
+  it('음주자 전체 해제 시 alcohol 섹션 자동 OFF', async () => {
+    const user = userEvent.setup();
+    const { alice, bob, charlie } = setupMembers();
+    const session = createSession({
+      alcohol: { unitPrice: 5000, quantity: 3, drinkerIds: [alice.id, bob.id, charlie.id] },
+    });
+    renderCard(session);
+
+    // 전체 해제 클릭 (음주자 영역의 전체 해제 버튼)
+    const allDrinkerBtn = screen.getByLabelText('음주자 전체 해제');
+    await user.click(allDrinkerBtn);
+
+    const updated = useSessionStore.getState().sessions[0];
+    expect(updated.alcohol).toBeUndefined();
+  });
 });
 
 // ── Alcohol animation ────────────────────────────────

@@ -136,10 +136,15 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
     if (!session.alcohol) return;
     const participants = members.filter((m) => session.participantIds.includes(m.id));
     const allDrinking = participants.every((m) => session.alcohol!.drinkerIds.includes(m.id));
-    setAlcohol(session.id, {
-      ...session.alcohol,
-      drinkerIds: allDrinking ? [] : participants.map((m) => m.id),
-    });
+    if (allDrinking) {
+      // 전체 해제 시 alcohol 자체를 제거
+      setAlcohol(session.id, undefined);
+    } else {
+      setAlcohol(session.id, {
+        ...session.alcohol,
+        drinkerIds: participants.map((m) => m.id),
+      });
+    }
   };
 
   const formatInputAmount = (amount: number) => {

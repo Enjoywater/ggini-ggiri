@@ -81,6 +81,8 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({
           sessions: state.sessions.map((s) => {
             if (s.id !== sessionId) return s;
+            // 결제자는 참여 해제 불가
+            if (s.payerId === memberId && s.participantIds.includes(memberId)) return s;
             const has = s.participantIds.includes(memberId);
             return {
               ...s,
@@ -105,11 +107,12 @@ export const useSessionStore = create<SessionState>()(
           sessions: state.sessions
             .map((s) => {
               const participantIds = s.participantIds.filter((id) => id !== memberId);
-              const alcohol = s.alcohol
-                ? {
-                    ...s.alcohol,
-                    drinkerIds: s.alcohol.drinkerIds.filter((id) => id !== memberId),
-                  }
+              const drinkerIds = s.alcohol
+                ? s.alcohol.drinkerIds.filter((id) => id !== memberId)
+                : undefined;
+              // drinkerIds가 빈 배열이면 alcohol 객체 자체를 제거
+              const alcohol = s.alcohol && drinkerIds && drinkerIds.length > 0
+                ? { ...s.alcohol, drinkerIds }
                 : undefined;
               const payerId = s.payerId === memberId
                 ? (participantIds[0] ?? '')

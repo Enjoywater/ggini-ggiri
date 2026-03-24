@@ -56,7 +56,7 @@ export function validateShareableData(data: unknown): ShareableData {
 
   // 계좌 정보 포함 여부 검사
   const raw = JSON.stringify(data);
-  if (raw.includes('accountNumber') || raw.includes('bankName')) {
+  if (raw.includes('accountNumber') || raw.includes('bankName') || raw.includes('ownerName')) {
     throw new Error('보안 위반: 계좌 정보가 포함된 데이터입니다.');
   }
 

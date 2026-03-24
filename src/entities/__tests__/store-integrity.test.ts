@@ -156,7 +156,7 @@ describe('Member 삭제 시 Session 참조 정합성', () => {
     expect(updated.payerId).toBe(bob.id);
   });
 
-  it('removeMemberFromSessions 호출 시 drinkerIds에서도 제거됨', () => {
+  it('removeMemberFromSessions 호출 시 drinkerIds에서도 제거됨 (유일 음주자 삭제 시 alcohol 객체 제거)', () => {
     const alice = useMemberStore.getState().addMember('앨리스');
     const bob = useMemberStore.getState().addMember('밥');
 
@@ -175,8 +175,86 @@ describe('Member 삭제 시 Session 참조 정합성', () => {
     useSessionStore.getState().removeMemberFromSessions(alice.id);
 
     const updated = useSessionStore.getState().getSession(session.id)!;
-    expect(updated.alcohol!.drinkerIds).not.toContain(alice.id);
-    expect(updated.alcohol!.drinkerIds.length).toBe(0);
+    // 유일 음주자 삭제 시 alcohol 객체 자체가 제거됨
+    expect(updated.alcohol).toBeUndefined();
+  });
+
+  it('removeMemberFromSessions 호출 시 다른 음주자가 남아있으면 alcohol 유지', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+
+    const session = useSessionStore.getState().addSession({
+      title: '1차',
+      totalAmount: 50000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id],
+    });
+    useSessionStore.getState().setAlcohol(session.id, {
+      unitPrice: 5000,
+      quantity: 2,
+      drinkerIds: [alice.id, bob.id],
+    });
+
+    useSessionStore.getState().removeMemberFromSessions(alice.id);
+
+    const updated = useSessionStore.getState().getSession(session.id)!;
+    expect(updated.alcohol).toBeDefined();
+    expect(updated.alcohol!.drinkerIds).toEqual([bob.id]);
+  });
+});
+
+describe('toggleParticipant: payer 보호', () => {
+  it('결제자(payer)는 참여 해제 불가', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+
+    const session = useSessionStore.getState().addSession({
+      title: '1차',
+      totalAmount: 50000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id],
+    });
+
+    // payer인 앨리스를 토글(해제) 시도
+    useSessionStore.getState().toggleParticipant(session.id, alice.id);
+
+    const updated = useSessionStore.getState().getSession(session.id)!;
+    // 여전히 참여자 목록에 있어야 함
+    expect(updated.participantIds).toContain(alice.id);
+  });
+
+  it('결제자가 아닌 멤버는 정상적으로 토글 해제 가능', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+
+    const session = useSessionStore.getState().addSession({
+      title: '1차',
+      totalAmount: 50000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id],
+    });
+
+    useSessionStore.getState().toggleParticipant(session.id, bob.id);
+
+    const updated = useSessionStore.getState().getSession(session.id)!;
+    expect(updated.participantIds).not.toContain(bob.id);
+  });
+
+  it('참여하지 않는 결제자는 추가 가능 (payer가 아직 참여자가 아닌 경우)', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+
+    const session = useSessionStore.getState().addSession({
+      title: '1차',
+      totalAmount: 50000,
+      payerId: alice.id,
+      participantIds: [bob.id], // alice가 참여자가 아님
+    });
+
+    useSessionStore.getState().toggleParticipant(session.id, alice.id);
+
+    const updated = useSessionStore.getState().getSession(session.id)!;
+    expect(updated.participantIds).toContain(alice.id);
   });
 });
 
