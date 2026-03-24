@@ -11,6 +11,7 @@ import { useHydration } from '@/shared/lib/use-hydration';
 import { PASTEL_COLORS } from '@/shared/lib';
 import { useModalManager } from '@/shared/lib/use-modal-manager';
 import { formatAmount } from '@/shared/lib/formatters';
+import { useToast } from '@/shared/lib/use-toast';
 import { SessionCard } from '@/widgets/session-card';
 import { useNewItemIds } from '@/shared/lib/use-animate-list';
 import { useOnboardingStore } from '@/entities/onboarding';
@@ -48,6 +49,7 @@ export function MainPage() {
   const addPreset = usePresetStore((s) => s.addPreset);
   const removePreset = usePresetStore((s) => s.removePreset);
   const modal = useModalManager(MODAL_KEYS);
+  const toast = useToast();
 
   const [newName, setNewName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
@@ -57,14 +59,34 @@ export function MainPage() {
   const [editingName, setEditingName] = useState('');
 
   const handleAddMember = () => {
-    const trimmed = newName.trim();
-    if (!trimmed) return;
-    if (members.some((m) => m.name === trimmed)) {
+    const raw = newName.trim();
+    if (!raw) return;
+
+    // 쉼표 또는 줄바꿈이 있으면 일괄 추가
+    if (/[,\n]/.test(raw)) {
+      const names = raw.split(/[,\n]/).map((n) => n.trim()).filter(Boolean);
+      const existingNames = new Set(members.map((m) => m.name));
+      const added: string[] = [];
+      for (const name of names) {
+        if (existingNames.has(name)) continue;
+        addMember(name);
+        existingNames.add(name);
+        added.push(name);
+      }
+      if (added.length > 0) {
+        toast.success(`${added.length}명 추가됨`);
+      }
+      setNameError(null);
+      setNewName('');
+      return;
+    }
+
+    if (members.some((m) => m.name === raw)) {
       setNameError('이미 같은 이름의 참여자가 있습니다.');
       return;
     }
     setNameError(null);
-    addMember(trimmed);
+    addMember(raw);
     setNewName('');
   };
 
@@ -420,7 +442,17 @@ export function MainPage() {
 
       <StickyBottomBar show={sessions.length > 0}>
         <OnboardingTooltip step="settle" currentStep={currentStep} message="정산 결과를 확인해 보세요!" position="top" onDismiss={dismissOnboarding}>
-          <LinkButton href="/settlement" fullWidth size="lg" disabled={!canCalculate}>
+          <LinkButton
+            href="/settlement"
+            fullWidth
+            size="lg"
+            disabled={!canCalculate}
+            onClick={() => {
+              if (hasZeroAmountSession) {
+                toast.info('0원인 세션이 있습니다. 확인해 주세요.');
+              }
+            }}
+          >
             정산하기
           </LinkButton>
         </OnboardingTooltip>

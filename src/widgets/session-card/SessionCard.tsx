@@ -147,12 +147,16 @@ export const SessionCard = memo(function SessionCard({ session, index, onRemove,
     }
   };
 
+  const handleFocusSelect = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
   const formatInputAmount = (amount: number) => {
     return amount > 0 ? formatAmountPlain(amount) : '';
   };
 
   return (
-    <Card className="relative" accentColor={PASTEL_COLORS[index % PASTEL_COLORS.length]}>
+    <Card className={`relative ${session.totalAmount === 0 ? 'ring-2 ring-warning-dark/50 bg-warning/5' : ''}`} accentColor={PASTEL_COLORS[index % PASTEL_COLORS.length]}>
       <CardHeader className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Chip
@@ -207,6 +211,7 @@ export const SessionCard = memo(function SessionCard({ session, index, onRemove,
             value={formatInputAmount(session.totalAmount)}
             onChange={(e) => handleAmountChange(e.target.value)}
             onBlur={handleAmountBlur}
+            onFocus={handleFocusSelect}
           />
         </FormField>
 
@@ -314,6 +319,7 @@ export const SessionCard = memo(function SessionCard({ session, index, onRemove,
                       value={formatInputAmount(session.alcohol?.unitPrice ?? 0)}
                       onChange={(e) => handleAlcoholUnitPrice(e.target.value)}
                       onBlur={handleUnitPriceBlur}
+                      onFocus={handleFocusSelect}
                     />
                   </FormField>
                   <FormField error={quantityError}>
@@ -326,6 +332,7 @@ export const SessionCard = memo(function SessionCard({ session, index, onRemove,
                       value={session.alcohol && session.alcohol.quantity > 0 ? String(session.alcohol.quantity) : ''}
                       onChange={(e) => handleAlcoholQuantity(e.target.value)}
                       onBlur={handleQuantityBlur}
+                      onFocus={handleFocusSelect}
                     />
                   </FormField>
                 </div>

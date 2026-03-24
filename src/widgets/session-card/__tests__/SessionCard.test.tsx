@@ -368,3 +368,69 @@ describe('SessionCard - 차수 배지 및 컬러 스트라이프', () => {
     expect(badge.className).toContain('pointer-events-none');
   });
 });
+
+// ── Focus select ────────────────────────────────────
+
+describe('SessionCard - 금액 focus 시 전체선택', () => {
+  it('총 금액 input focus 시 select 호출', async () => {
+    const user = userEvent.setup();
+    setupMembers();
+    const session = createSession({ totalAmount: 50000 });
+    renderCard(session);
+
+    const input = screen.getByDisplayValue('50,000');
+    const selectSpy = vi.spyOn(input as HTMLInputElement, 'select');
+    await user.click(input);
+    expect(selectSpy).toHaveBeenCalled();
+  });
+
+  it('주류 단가 input focus 시 select 호출', async () => {
+    const user = userEvent.setup();
+    setupMembers();
+    const session = createSession({
+      totalAmount: 90000,
+      alcohol: { unitPrice: 5000, quantity: 3, drinkerIds: [] },
+    });
+    renderCard(session);
+
+    const input = screen.getByDisplayValue('5,000');
+    const selectSpy = vi.spyOn(input as HTMLInputElement, 'select');
+    await user.click(input);
+    expect(selectSpy).toHaveBeenCalled();
+  });
+
+  it('수량 input focus 시 select 호출', async () => {
+    const user = userEvent.setup();
+    setupMembers();
+    const session = createSession({
+      totalAmount: 90000,
+      alcohol: { unitPrice: 5000, quantity: 3, drinkerIds: [] },
+    });
+    renderCard(session);
+
+    const input = screen.getByDisplayValue('3');
+    const selectSpy = vi.spyOn(input as HTMLInputElement, 'select');
+    await user.click(input);
+    expect(selectSpy).toHaveBeenCalled();
+  });
+});
+
+// ── Zero amount warning ─────────────────────────────
+
+describe('SessionCard - 0원 세션 경고', () => {
+  it('totalAmount가 0이면 경고 스타일 적용', () => {
+    setupMembers();
+    const session = createSession({ totalAmount: 0 });
+    const { container } = renderCard(session);
+    const card = container.querySelector('.ring-2');
+    expect(card).toBeInTheDocument();
+  });
+
+  it('totalAmount가 0이 아니면 경고 스타일 미적용', () => {
+    setupMembers();
+    const session = createSession({ totalAmount: 50000 });
+    const { container } = renderCard(session);
+    const card = container.querySelector('.ring-2');
+    expect(card).not.toBeInTheDocument();
+  });
+});

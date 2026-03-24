@@ -99,3 +99,45 @@ describe('SettlementResult', () => {
     expect(screen.getByText('정산할 내역이 없습니다')).toBeInTheDocument();
   });
 });
+
+describe('SettlementResult - 양방향 표시', () => {
+  const resultsWithReceiver = [
+    {
+      memberId: 'm1',
+      memberName: '홍길동',
+      totalAmount: 15000,
+      details: [
+        { sessionId: 's1', sessionTitle: '1차', baseAmount: 15000, alcoholAmount: 0, subtotal: 15000 },
+      ],
+    },
+    {
+      memberId: 'm2',
+      memberName: '김철수',
+      totalAmount: -15000,
+      details: [
+        { sessionId: 's1', sessionTitle: '1차', baseAmount: 15000, alcoholAmount: 0, subtotal: 15000 },
+      ],
+    },
+  ];
+
+  it('보내야 할 금액 섹션 표시', () => {
+    render(<SettlementResult results={resultsWithReceiver} payerName="김철수" />);
+    expect(screen.getByText('보내야 할 금액')).toBeInTheDocument();
+  });
+
+  it('받을 금액 섹션 표시', () => {
+    render(<SettlementResult results={resultsWithReceiver} payerName="김철수" />);
+    expect(screen.getByText('받을 금액')).toBeInTheDocument();
+  });
+
+  it('받을 사람 금액은 절댓값으로 표시', () => {
+    render(<SettlementResult results={resultsWithReceiver} payerName="김철수" />);
+    // 김철수는 -15000이지만 절대값 15,000으로 표시되어야 함
+    expect(screen.getByText('김철수')).toBeInTheDocument();
+  });
+
+  it('양쪽 모두 없으면 빈 상태 메시지', () => {
+    render(<SettlementResult results={[{ memberId: 'm1', memberName: 'A', totalAmount: 0, details: [] }]} payerName="결제자" />);
+    expect(screen.getByText('정산할 내역이 없습니다')).toBeInTheDocument();
+  });
+});

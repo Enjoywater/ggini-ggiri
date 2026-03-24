@@ -193,10 +193,10 @@ describe('SettlementPage - 송금 요약', () => {
 // ── Settlement Result ────────────────────────────────
 
 describe('SettlementPage - 개인별 정산', () => {
-  it('개인별 정산 내역 섹션 렌더링', () => {
+  it('보내야 할 금액 섹션 렌더링', () => {
     setupBasicSettlement();
     render(<SettlementPage />);
-    expect(screen.getByText('개인별 정산 내역')).toBeInTheDocument();
+    expect(screen.getByText('보내야 할 금액')).toBeInTheDocument();
   });
 
   it('세션별 내역(details) 표시', () => {
