@@ -12,10 +12,9 @@ import { useToast } from '@/shared/lib/use-toast';
 import { findMainPayer, formatAmount } from '@/shared/lib/formatters';
 import { settle, calculateBalance, optimizeTransfers } from '@/features/calculate';
 import { ShareButton } from '@/features/share';
-import { buildSettlementText, shareText } from '@/features/share/lib/text-share';
+import { buildSettlementText, shareText } from '@/features/share';
 import { SettlementResult } from '@/widgets/settlement-result';
-import type { Transfer } from '@/features/calculate';
-import type { Member } from '@/shared/types';
+import type { Transfer, Member } from '@/shared/types';
 import Link from 'next/link';
 
 function TransferSummary({

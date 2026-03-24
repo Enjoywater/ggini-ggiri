@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useSessionStore } from '@/entities/session/model/store';
+import { useSessionStore } from '@/entities/session';
 
 // ═══════════════════════════════════════════════════════
 // SessionCard alcohol 동기화 버그 수정 검증

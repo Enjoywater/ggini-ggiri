@@ -52,6 +52,13 @@ export interface SessionSettlement {
   subtotal: number;
 }
 
+/** 송금 명세 */
+export interface Transfer {
+  from: string; // memberId
+  to: string;   // memberId
+  amount: number;
+}
+
 /** 정산 히스토리 항목 */
 export interface SettlementHistory {
   id: string;

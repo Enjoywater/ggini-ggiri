@@ -16,8 +16,7 @@ vi.mock('@/shared/lib/share-store', () => ({
 import { shareToKakao, isKakaoAvailable } from '../kakao-share';
 import { loadKakaoSDK, isKakaoSDKReady } from '@/shared/lib/kakao-sdk';
 import { saveShare } from '@/shared/lib/share-store';
-import type { Member } from '@/shared/types';
-import type { Transfer } from '@/features/calculate';
+import type { Member, Transfer } from '@/shared/types';
 import type { ShareableData } from '@/shared/lib/serializer';
 
 const mockSendDefault = vi.fn();

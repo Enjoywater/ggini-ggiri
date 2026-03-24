@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Button } from '@/shared/ui';
-import { useHistoryStore } from '@/entities/history/model/store';
+import { useHistoryStore } from '@/entities/history';
 import { exportToJson, generateFileName } from '../lib/export';
 import { parseImportFile, extractHistory } from '../lib/import';
 

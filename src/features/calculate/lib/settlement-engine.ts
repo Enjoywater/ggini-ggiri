@@ -1,13 +1,8 @@
 import Big from 'big.js';
-import type { Member, Session, SettlementResult, SessionSettlement } from '@/shared/types';
+import type { Member, Session, SettlementResult, SessionSettlement, Transfer } from '@/shared/types';
 import { floor100, adjustRemainder } from './rounding';
 
-/** 송금 명세 */
-export interface Transfer {
-  from: string; // memberId
-  to: string;   // memberId
-  amount: number;
-}
+export type { Transfer };
 
 /**
  * 세션의 술값 합계를 계산하되, 총액을 초과하지 않도록 상한 제한
