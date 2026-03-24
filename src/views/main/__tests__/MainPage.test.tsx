@@ -7,6 +7,7 @@ import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
 import { usePresetStore } from '@/entities/preset';
 import { useOnboardingStore } from '@/entities/onboarding';
+import { useToastStore } from '@/shared/lib/toast-store';
 
 // ── Mocks ────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ beforeEach(() => {
   useAccountStore.getState().clearAccount();
   usePresetStore.getState().reset();
   useOnboardingStore.getState().reset();
+  useToastStore.setState({ toasts: [] });
   mockUseHydration.mockReturnValue(true);
 });
 
@@ -514,5 +516,89 @@ describe('MainPage - 온보딩 통합', () => {
     useOnboardingStore.getState().dismiss();
     render(<MainPage />);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+});
+
+// ── Batch member add ────────────────────────────────
+
+describe('MainPage - 참여자 일괄 추가', () => {
+  it('쉼표 구분으로 여러 멤버 일괄 추가', async () => {
+    const user = userEvent.setup();
+    render(<MainPage />);
+
+    const input = screen.getByLabelText('참여자 이름 입력');
+    await user.type(input, '앨리스,밥,찰리{Enter}');
+
+    const members = useMemberStore.getState().members;
+    expect(members).toHaveLength(3);
+    expect(members.map((m) => m.name)).toEqual(['앨리스', '밥', '찰리']);
+  });
+
+  it('일괄 추가 시 빈 이름 무시', async () => {
+    const user = userEvent.setup();
+    render(<MainPage />);
+
+    const input = screen.getByLabelText('참여자 이름 입력');
+    await user.type(input, '앨리스,,밥, ,찰리{Enter}');
+
+    const members = useMemberStore.getState().members;
+    expect(members).toHaveLength(3);
+  });
+
+  it('일괄 추가 시 중복 이름 무시', async () => {
+    const user = userEvent.setup();
+    useMemberStore.getState().addMember('앨리스');
+    render(<MainPage />);
+
+    const input = screen.getByLabelText('참여자 이름 입력');
+    await user.type(input, '앨리스,밥,밥{Enter}');
+
+    const members = useMemberStore.getState().members;
+    expect(members).toHaveLength(2);
+    expect(members.map((m) => m.name)).toEqual(['앨리스', '밥']);
+  });
+
+  it('일괄 추가 후 토스트 표시', async () => {
+    const user = userEvent.setup();
+    render(<MainPage />);
+
+    const input = screen.getByLabelText('참여자 이름 입력');
+    await user.type(input, '앨리스,밥{Enter}');
+
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts.some((t) => t.message.includes('2명 추가됨'))).toBe(true);
+  });
+
+  it('일괄 추가 후 입력 필드 초기화', async () => {
+    const user = userEvent.setup();
+    render(<MainPage />);
+
+    const input = screen.getByLabelText('참여자 이름 입력');
+    await user.type(input, '앨리스,밥{Enter}');
+
+    expect(input).toHaveValue('');
+  });
+});
+
+// ── Zero amount toast ───────────────────────────────
+
+describe('MainPage - 0원 세션 토스트', () => {
+  it('0원 세션 있을 때 정산 클릭 시 토스트 표시', async () => {
+    const user = userEvent.setup();
+    const alice = useMemberStore.getState().addMember('앨리스');
+    useMemberStore.getState().addMember('밥');
+    useSessionStore.getState().addSession({
+      title: '1차',
+      totalAmount: 0,
+      payerId: alice.id,
+      participantIds: [alice.id],
+    });
+    render(<MainPage />);
+
+    const link = screen.getByText('정산하기');
+    await user.click(link);
+
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts.some((t) => t.message.includes('0원'))).toBe(true);
   });
 });
