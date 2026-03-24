@@ -98,8 +98,16 @@ describe('getShare', () => {
     expect(mockEq).toHaveBeenCalledWith('id', 'test-id');
   });
 
-  it('Supabase 에러 시 network 반환', async () => {
-    mockSingle.mockResolvedValue({ data: null, error: { message: 'error' } });
+  it('PGRST116 에러 시 not_found 반환', async () => {
+    mockSingle.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'not found' } });
+
+    const result = await getShare('test-id');
+
+    expect(result).toEqual({ ok: false, reason: 'not_found' });
+  });
+
+  it('PGRST116 이외의 Supabase 에러 시 network 반환', async () => {
+    mockSingle.mockResolvedValue({ data: null, error: { code: 'PGRST000', message: 'error' } });
 
     const result = await getShare('test-id');
 
