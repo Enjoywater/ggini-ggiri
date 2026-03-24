@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Card, CardHeader, CardTitle, Input, Chip, Switch, Button, FormField } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
@@ -15,7 +15,7 @@ interface SessionCardProps {
   onDuplicate?: (id: string) => void;
 }
 
-export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCardProps) {
+export const SessionCard = memo(function SessionCard({ session, index, onRemove, onDuplicate }: SessionCardProps) {
   const members = useMemberStore((s) => s.members);
   const { updateSession, toggleParticipant, setAlcohol } = useSessionStore();
   const alcoholEnabled = !!session.alcohol;
@@ -375,4 +375,4 @@ export function SessionCard({ session, index, onRemove, onDuplicate }: SessionCa
       </div>
     </Card>
   );
-}
+});

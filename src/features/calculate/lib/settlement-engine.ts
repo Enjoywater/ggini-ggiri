@@ -69,25 +69,7 @@ export function calculateBalance(
   }
 
   for (const session of sessions) {
-    const baseShare = calculateSessionShare(session);
-    const alcoholShare = calculateAlcoholShare(session);
-
-    // 각 참여자별 부담액 산출 (절사 전)
-    const sessionShares = new Map<string, Big>();
-    for (const pid of session.participantIds) {
-      let share = baseShare;
-      if (session.alcohol?.drinkerIds.includes(pid)) {
-        share = share.plus(alcoholShare);
-      }
-      sessionShares.set(pid, floor100(share));
-    }
-
-    // 절사 차액을 Payer에게 가감
-    const adjusted = adjustRemainder(
-      sessionShares,
-      session.payerId,
-      new Big(session.totalAmount),
-    );
+    const adjusted = getAdjustedSessionShares(session);
 
     // 부담액 누적
     for (const [mid, amount] of adjusted) {

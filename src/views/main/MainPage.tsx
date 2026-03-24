@@ -20,8 +20,15 @@ const MODAL_KEYS = ['delete', 'savePreset', 'loadPreset', 'deletePreset', 'delet
 
 export function MainPage() {
   const hydrated = useHydration();
-  const { members, addMember, removeMember, updateMember } = useMemberStore();
-  const { sessions, addSession, removeSession, duplicateSession, removeMemberFromSessions } = useSessionStore();
+  const members = useMemberStore((s) => s.members);
+  const addMember = useMemberStore((s) => s.addMember);
+  const removeMember = useMemberStore((s) => s.removeMember);
+  const updateMember = useMemberStore((s) => s.updateMember);
+  const sessions = useSessionStore((s) => s.sessions);
+  const addSession = useSessionStore((s) => s.addSession);
+  const removeSession = useSessionStore((s) => s.removeSession);
+  const duplicateSession = useSessionStore((s) => s.duplicateSession);
+  const removeMemberFromSessions = useSessionStore((s) => s.removeMemberFromSessions);
   const account = useAccountStore((s) => s.account);
 
   const initializedRef = useRef(false);
@@ -37,7 +44,9 @@ export function MainPage() {
     }
   }, [hydrated, account, addMember]);
 
-  const { presets, addPreset, removePreset } = usePresetStore();
+  const presets = usePresetStore((s) => s.presets);
+  const addPreset = usePresetStore((s) => s.addPreset);
+  const removePreset = usePresetStore((s) => s.removePreset);
   const modal = useModalManager(MODAL_KEYS);
 
   const [newName, setNewName] = useState('');
@@ -185,7 +194,8 @@ export function MainPage() {
     });
   };
 
-  const { currentStep, dismiss: dismissOnboarding } = useOnboardingStore();
+  const currentStep = useOnboardingStore((s) => s.currentStep);
+  const dismissOnboarding = useOnboardingStore((s) => s.dismiss);
   useOnboardingAutoProgress();
 
   const newMemberIds = useNewItemIds(members);

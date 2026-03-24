@@ -64,7 +64,10 @@ export async function getShare(id: string): Promise<ShareResult> {
     .eq('id', id)
     .single();
 
-  if (error) return { ok: false, reason: 'network' };
+  if (error) {
+    if (error.code === 'PGRST116') return { ok: false, reason: 'not_found' };
+    return { ok: false, reason: 'network' };
+  }
   if (!data) return { ok: false, reason: 'not_found' };
 
   try {
