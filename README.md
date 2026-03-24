@@ -6,13 +6,14 @@ Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나
 ## 1) 사용자 관점: 이 앱으로 할 수 있는 것
 
 - 참여자 추가/삭제 및 그룹(프리셋) 저장/불러오기
+- 참여자 일괄 추가 (쉼표/줄바꿈 구분 — "철수,영희,민수" 입력 시 한번에 추가)
 - 참여자 이름 탭으로 인라인 수정, ✕ 버튼으로 삭제
 - N차별로 결제자, 참여자, 금액 입력
 - 빠른 금액 버튼 (+1천/+5천/+1만/+5만) 으로 간편 입력
 - 참여자/음주자 전체 선택/해제 토글
 - 세션 합계 실시간 표시
 - 술값 별도 정산(주류 단가/수량/음주자 지정, 시각적으로 구분된 주류 섹션)
-- 자동 정산 결과 확인(개인별 부담 + 송금 요약)
+- 자동 정산 결과 확인(보내야 할 금액 / 받을 금액 양방향 표시 + 송금 요약)
 - 정산 근거 투명 공개(세션별 계산식 펼쳐보기: 기본 부담, 주류 부담, 10원 절사 설명)
 - 송금 완료 체크 (송금 건별 완료 표시, 완료 카운트, 초기화)
 - 계좌 정보 저장 후 원클릭 복사
@@ -28,6 +29,9 @@ Next.js 기반의 정적 사이트로, 브라우저에서 바로 사용하거나
 - 접근성 지원 (WCAG AA 색상 대비, 44px 터치 타겟, ARIA 속성, 키보드 네비게이션, 모달 포커스 트랩 + X 닫기 버튼)
 - Sticky 정산하기 버튼 (스크롤해도 항상 하단 고정, safe-area 대응)
 - Skeleton 로딩 화면 (하이드레이션 중 레이아웃 보존)
+- 금액 입력 시 자동 전체선택 (수정 편의성)
+- 0원 세션 경고 (시각적 강조 + 정산 시 toast 알림)
+- 결제자 참여 해제 방어 (결제자는 참여자에서 토글 해제 불가)
 
 ## 2) 핵심 정산 규칙
 
@@ -123,7 +127,7 @@ Vercel에 배포 중이며, 환경변수 설정이 필요합니다:
 - 스타일: Tailwind CSS v4
 - UI: LinkButton, Modal (useId, X 닫기, dvh 스크롤), Chip (role 분리), StickyBottomBar, Skeleton
 - PWA: manifest.json + Service Worker
-- 테스트: Vitest (767 tests, 58 files)
+- 테스트: Vitest (789 tests, 58 files)
 - 보안 헤더: vercel.json (CSP, X-Frame-Options, Permissions-Policy 등)
 
 ## 6) 아키텍처
@@ -166,7 +170,7 @@ src/
   - 금액 범위 검증 (세션 1억, 단가 1천만, 수량 999, 정산 합산 10억)
   - 세션 논리 검증 (결제자∈참여자, 음주자⊆참여자, 중복 ID, 주류 총액 ≤ 세션 총액)
   - transfers 필드 포함 검증
-- 복원 데이터에 계좌 정보 필드가 포함되면 차단
+- 복원 데이터에 계좌 정보 필드(`accountNumber`, `bankName`, `ownerName`)가 포함되면 차단
 - 문자열 sanitize (제어 문자 + HTML 태그 제거, 200자 제한, XSS 방어는 React JSX 자동 이스케이핑에 위임)
 - Supabase 공유 데이터 100KB 크기 제한 + ID 형식 검증
 - 검증 상수 일원화 (`shared/lib/constants.ts` — validators와 serializer가 동일 상수 참조)
@@ -176,7 +180,7 @@ src/
 
 ## 8) 테스트 범위
 
-현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 767개 테스트, 58개 파일)
+현재 다음 영역에 대한 단위/통합/E2E 테스트가 포함되어 있습니다. (총 789개 테스트, 58개 파일)
 
 - 정산 엔진 (`settlement-engine`, edge cases, settle/calculateBalance 정합성)
 - 공유/직렬화 (`text-share` 세션별 내역 포함, `serializer`)
@@ -209,75 +213,6 @@ src/
 - 히스토리는 최대 50개까지 보관됩니다.
 - 토스트 알림은 메시지 길이에 따라 자동 Duration이 조절됩니다 (2~5초, 에러 시 +1.5초).
 - 모달 상태는 `useModalManager` 훅으로 통합 관리됩니다 (MainPage 6개 모달).
-
----
-
-## TODO PLAN: UX/UI 디자인 개선
-
-디자인 세션(DL + D1~D3)에서 도출된 개선 사항. A/B/C는 서로 독립적으로 병렬 진행 가능.
-
-### Plan A: 애니메이션 시스템
-
-공통 원칙: 모든 모션은 `motion-safe:` 가드 필수, 800ms 룰(단일 시퀀스 총 시간 ≤ 800ms), Progressive Enhancement.
-
-**Phase 0 — 공통 인프라 (선행 필수)**
-- [x] `shared/lib/use-reduced-motion.ts` — `prefers-reduced-motion` 감지 훅
-- [x] `globals.css` — `@media (prefers-reduced-motion: reduce)` 전역 가드 + `@keyframes` 9종 정의
-
-**Phase 1 — CSS-only (병렬 가능)**
-- [x] A-9: 빈 상태 숨쉬기 — `scale 1↔1.02`, infinite, 3s (MainPage, HistoryPage)
-- [x] A-4: Chip 토글 피드백 — `scale-pulse` + `motion-safe:duration-200` (Chip.tsx)
-- [x] A-3: 술값 접기/펼치기 — `grid-template-rows: 0fr→1fr`, 300ms ease-out (SessionCard.tsx)
-
-**Phase 2 — 훅 기반**
-- [x] A-8: 금액 카운트업 — `useAnimatedNumber` 훅 + `AnimatedAmount` 컴포넌트, 150ms rAF 보간
-- [x] A-5: 멤버/세션 추가삭제 — `useAnimateList` 훅, staggered spring-in + fade-out + layout shift
-
-**Phase 3 — 통합 시스템**
-- [x] A-2: 정산 결과 진입 시퀀스 — staggered fade-up (index × 80ms) + 금액 카운트업 + 타이틀 bounce
-- [x] A-7: 토스트 시스템 — Zustand store + `createPortal`, slide-up → 자동 duration → fade-out
-- [x] A-6: 송금 완료 체크 — SVG `stroke-dasharray` 드로잉 300ms + CSS 스파클 파티클 200ms
-
-**Phase 4 — 페이지 전환**
-- [x] A-1: View Transitions API — `TransitionLink` 컴포넌트, 페이지 depth 맵 기반 슬라이드 방향 결정
-
-> 신규 9개 / 수정 10개 파일 | 외부 라이브러리 없음 (~3KB gzipped)
-
-### Plan B: UX 개선
-
-**Phase 1 — 기반 인프라 (병렬 가능)**
-- [x] B-4: 글로벌 토스트 — `Toast.tsx`, `ToastContainer.tsx`, `toast-store.ts`, `use-toast.ts` (A-7에서 구현 완료)
-- [x] B-3: EmptyState 컴포넌트 — `EmptyState.tsx` + SVG 일러스트 3종 (`currentColor` 기반 다크모드 자동 대응)
-
-**Phase 2 — 독립 기능 (병렬 가능)**
-- [x] B-1: Sticky 정산하기 버튼 — `StickyBottomBar.tsx`, `backdrop-blur-md`, `safe-area-inset-bottom`, 스크롤 최적화
-- [x] B-2: 빠른 금액 버튼 — SessionCard 내 Chip 버튼 (+1천/+5천/+1만/+5만)
-- [x] B-3': 빈 상태 적용 — 상황별 맞춤 메시지 + CTA 유도 (MainPage, HistoryPage 등)
-
-**Phase 3 — 통합 기능**
-- [x] B-5: 인라인 온보딩 — `entities/onboarding/` + `features/inline-onboarding/`, 4단계 자동 진행, Zustand persist, `completionCondition` 자동 감지
-
-### Plan C: 비주얼 개선
-
-독립 구현 가능, 우선순위 순:
-
-- [x] C-4: 주류 섹션 시각 구분 — `border-l-4 border-pastel-peach-dark` + `bg-pastel-peach/50` + 음주자 수 표시 (SessionCard.tsx)
-- [x] C-1: 세션 카드 컬러 스트라이프 — Card에 `accentColor` prop + `border-l-4` 파스텔 회전색 + "1차" 차수 배지 (Card.tsx, SessionCard.tsx)
-- [x] C-3: 공유 섹션 강조 — `<section>` + `bg-gradient-to-br from-primary/20 to-secondary/20` + 아이콘 추가 (SettlementPage.tsx, ShareButton.tsx)
-- [x] C-2: 정산 카드 멤버 컬러 — `members` prop 추가 + `tintMap`으로 `bg-pastel-{color}/10` 배경 + 색상 도트 (SettlementResult.tsx, SettlementPage.tsx)
-
-### Plan D: 정산 근거 투명성 + 보안 강화 (신규)
-
-- [x] D-1: 정산 근거 설명 — SettlementResult에 세션별 계산식 토글 (기본 부담, 주류 부담, 10원 절사)
-- [x] D-2: 세션 데이터 논리 검증 — `validateSessionConsistency` (결제자∈참여자, 음주자⊆참여자, 중복 ID, 주류 초과)
-- [x] D-3: 보안 헤더 — `vercel.json` CSP + X-Frame-Options + Permissions-Policy
-- [x] D-4: 검증 상수 일원화 — `constants.ts`로 validators/serializer 상한값 통일
-- [x] D-5: 공유 저장 전 검증 — `saveShare()` DB insert 전 `validateShareableData()` 호출
-- [x] D-6: Toast 자동 Duration — 메시지 길이 비례 (2~5초) + 에러 +1.5초
-- [x] D-7: Skeleton 로딩 — MainPage/SettlementPage 하이드레이션 중 레이아웃 보존
-- [x] D-8: Switch WCAG 접근성 — aria-label 이중 라벨링 제거, useId() 도입
-- [x] D-9: MainPage 상태 관리 — useModalManager 훅으로 12개 useState 통합
-- [x] D-10: SettlementPage 리팩토링 — TransferSummary 컴포넌트 추출 + useMemo 최적화
 
 ---
 
