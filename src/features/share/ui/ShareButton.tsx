@@ -4,8 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { shareToKakao, isKakaoAvailable } from '../lib/kakao-share';
 import { loadKakaoSDK } from '@/shared/lib/kakao-sdk';
 import type { ShareableData } from '@/shared/lib/serializer';
-import type { UserAccount, Member } from '@/shared/types';
-import type { Transfer } from '@/features/calculate';
+import type { UserAccount, Member, Transfer } from '@/shared/types';
 
 interface ShareButtonProps {
   data: ShareableData;

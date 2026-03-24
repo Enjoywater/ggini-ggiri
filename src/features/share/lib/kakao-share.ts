@@ -2,9 +2,8 @@ import { nanoid } from 'nanoid';
 import { loadKakaoSDK, isKakaoSDKReady } from '@/shared/lib/kakao-sdk';
 import { saveShare } from '@/shared/lib/share-store';
 import type { ShareableData } from '@/shared/lib/serializer';
-import type { UserAccount, Member } from '@/shared/types';
+import type { UserAccount, Member, Transfer } from '@/shared/types';
 import { formatAmount } from '@/shared/lib';
-import type { Transfer } from '@/features/calculate';
 
 const APP_URL_BASE = typeof window !== 'undefined'
   ? window.location.origin

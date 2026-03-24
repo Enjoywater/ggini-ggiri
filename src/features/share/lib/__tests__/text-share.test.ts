@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSettlementText, shareText } from '../text-share';
-import type { Transfer } from '@/features/calculate';
-import type { Member, Session, SettlementResult, UserAccount } from '@/shared/types';
+import type { Member, Session, SettlementResult, UserAccount, Transfer } from '@/shared/types';
 
 const members: Member[] = [
   { id: 'A', name: '앨리스' },

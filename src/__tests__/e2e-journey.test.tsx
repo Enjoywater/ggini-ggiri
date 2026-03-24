@@ -6,7 +6,7 @@ import { useHistoryStore } from '@/entities/history';
 import { usePresetStore } from '@/entities/preset';
 import { useTransferCompletionStore, getTransferKey } from '@/entities/transfer-completion';
 import { settle, calculateBalance, optimizeTransfers } from '@/features/calculate';
-import { buildSettlementText } from '@/features/share/lib/text-share';
+import { buildSettlementText } from '@/features/share';
 import { formatAmount } from '@/shared/lib/formatters';
 import type { Member } from '@/shared/types';
 import Big from 'big.js';

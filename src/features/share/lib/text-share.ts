@@ -1,5 +1,4 @@
-import type { Transfer } from '@/features/calculate';
-import type { Member, Session, SettlementResult, UserAccount } from '@/shared/types';
+import type { Member, Session, SettlementResult, UserAccount, Transfer } from '@/shared/types';
 import { formatAmount } from '@/shared/lib';
 
 interface TextShareOptions {
