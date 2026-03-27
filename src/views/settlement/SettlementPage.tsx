@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Button, LinkButton, CheckAnimation, SettlementPageSkeleton, CelebrationBanner } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
@@ -37,16 +37,6 @@ function TransferSummary({
   const hasAnyCompleted = completedCount > 0;
 
   const allComplete = transfers.length > 0 && completedCount === transfers.length;
-
-  // 마운트 시점 기억 + 이전 상태와 비교하여 celebrating 파생
-  const prevCompleteRef = useRef(allComplete);
-  const celebrating =
-    transfers.length > 0 && allComplete && !prevCompleteRef.current;
-
-  // ref 업데이트는 렌더 직후 동기적으로 (side-effect 없음)
-  if (prevCompleteRef.current !== allComplete) {
-    prevCompleteRef.current = allComplete;
-  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -103,7 +93,7 @@ function TransferSummary({
           </button>
         );
       })}
-      <CelebrationBanner show={celebrating} />
+      <CelebrationBanner show={allComplete} />
     </div>
   );
 }
