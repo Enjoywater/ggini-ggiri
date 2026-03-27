@@ -6,21 +6,23 @@ const mockSelect = vi.fn();
 const mockEq = vi.fn();
 const mockSingle = vi.fn();
 
+const mockSupabaseClient = {
+  from: vi.fn(() => ({
+    insert: mockInsert,
+    select: (...args: unknown[]) => {
+      mockSelect(...args);
+      return {
+        eq: (...eqArgs: unknown[]) => {
+          mockEq(...eqArgs);
+          return { single: mockSingle };
+        },
+      };
+    },
+  })),
+};
+
 vi.mock('../supabase', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      insert: mockInsert,
-      select: (...args: unknown[]) => {
-        mockSelect(...args);
-        return {
-          eq: (...eqArgs: unknown[]) => {
-            mockEq(...eqArgs);
-            return { single: mockSingle };
-          },
-        };
-      },
-    })),
-  },
+  getSupabase: vi.fn(() => Promise.resolve(mockSupabaseClient)),
 }));
 
 vi.mock('nanoid', () => ({
@@ -189,10 +191,8 @@ describe('getShare - ID 형식 검증', () => {
 });
 
 describe('getShare - supabase가 null인 경우', () => {
-  it('supabase가 null이면 network 에러 반환', async () => {
-    // 이 케이스는 supabase 모듈이 null을 반환하는 상황을 테스트
-    // 현재 mock에서는 항상 supabase가 존재하므로 별도 모듈 리셋 필요
-    vi.doMock('../supabase', () => ({ supabase: null }));
+  it('getSupabase가 null을 반환하면 network 에러 반환', async () => {
+    vi.doMock('../supabase', () => ({ getSupabase: () => Promise.resolve(null) }));
     vi.resetModules();
 
     const { getShare: getShareNull } = await import('../share-store');
@@ -202,8 +202,8 @@ describe('getShare - supabase가 null인 경우', () => {
 });
 
 describe('saveShare - supabase가 null인 경우', () => {
-  it('supabase가 null이면 throw', async () => {
-    vi.doMock('../supabase', () => ({ supabase: null }));
+  it('getSupabase가 null을 반환하면 throw', async () => {
+    vi.doMock('../supabase', () => ({ getSupabase: () => Promise.resolve(null) }));
     vi.resetModules();
 
     const { saveShare: saveShareNull } = await import('../share-store');

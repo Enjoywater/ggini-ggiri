@@ -98,6 +98,21 @@ describe('useToastStore', () => {
       expect(remaining[0].message).toBe('To keep');
     });
 
+    it('clears the auto-removal timer when manually removed', () => {
+      useToastStore.getState().addToast('Will be removed early');
+
+      const toasts = useToastStore.getState().toasts;
+      expect(toasts).toHaveLength(1);
+      const id = toasts[0].id;
+
+      useToastStore.getState().removeToast(id);
+      expect(useToastStore.getState().toasts).toHaveLength(0);
+
+      // Advance past the auto-removal duration; the timer callback should not fire
+      vi.advanceTimersByTime(10000);
+      expect(useToastStore.getState().toasts).toHaveLength(0);
+    });
+
     it('does nothing when removing a non-existent ID', () => {
       useToastStore.getState().addToast('Existing');
 

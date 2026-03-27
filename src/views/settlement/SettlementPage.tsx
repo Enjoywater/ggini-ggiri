@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Button, LinkButton, CheckAnimation, SettlementPageSkeleton } from '@/shared/ui';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, LinkButton, CheckAnimation, SettlementPageSkeleton, CelebrationBanner } from '@/shared/ui';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
@@ -36,6 +36,33 @@ function TransferSummary({
   }).length;
   const hasAnyCompleted = completedCount > 0;
 
+  const allComplete = transfers.length > 0 && completedCount === transfers.length;
+
+  // 마운트 스킵 + 전환 감지
+  const isMountRef = useRef(true);
+  const prevCompleteRef = useRef(false);
+  const [celebrating, setCelebrating] = useState(false);
+
+  useEffect(() => {
+    if (isMountRef.current) {
+      isMountRef.current = false;
+      prevCompleteRef.current = allComplete;
+      return;
+    }
+    if (transfers.length === 0) {
+      setCelebrating(false);
+      prevCompleteRef.current = allComplete;
+      return;
+    }
+    if (allComplete && !prevCompleteRef.current) {
+      setCelebrating(true);
+    }
+    if (!allComplete) {
+      setCelebrating(false);
+    }
+    prevCompleteRef.current = allComplete;
+  }, [allComplete, transfers.length]);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -63,8 +90,8 @@ function TransferSummary({
             key={`${t.from}-${t.to}-${t.amount}`}
             type="button"
             onClick={() => toggleCompletion(key)}
-            aria-label={`${fromMember?.name} \u2192 ${toMember?.name} ${formatAmount(t.amount)} 송금 완료 토글`}
-            className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors animate-fade-up ${
+            aria-label={`${fromMember?.name}에서 ${toMember?.name}에게 ${formatAmount(t.amount)} 송금 ${completed ? '완료 해제' : '완료 표시'}`}
+            className={`flex w-full min-h-[44px] items-center justify-between rounded-xl px-4 py-3 text-left transition-colors animate-fade-up ${
               completed
                 ? 'bg-pastel-mint/30'
                 : 'bg-pastel-sky/30'
@@ -91,6 +118,7 @@ function TransferSummary({
           </button>
         );
       })}
+      <CelebrationBanner show={celebrating} />
     </div>
   );
 }

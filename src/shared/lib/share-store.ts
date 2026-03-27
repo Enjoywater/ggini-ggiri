@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 import { validateShareableData } from './serializer';
 import type { ShareableData } from './serializer';
 
@@ -8,6 +8,7 @@ const MAX_SHARE_SIZE = 100_000;
 
 /** 정산 데이터를 Supabase에 저장하고 짧은 ID 반환 */
 export async function saveShare(data: ShareableData, id?: string): Promise<string> {
+  const supabase = await getSupabase();
   if (!supabase) {
     throw new Error('공유 기능이 비활성화되어 있습니다.');
   }
@@ -25,7 +26,7 @@ export async function saveShare(data: ShareableData, id?: string): Promise<strin
 
   const shareId = id ?? nanoid(10);
 
-  const insert = () => supabase!
+  const insert = () => supabase
     .from('shared_settlements')
     .insert({ id: shareId, data });
 
@@ -49,6 +50,7 @@ export type ShareResult =
 
 /** ID로 정산 데이터 조회 */
 export async function getShare(id: string): Promise<ShareResult> {
+  const supabase = await getSupabase();
   if (!supabase) {
     return { ok: false, reason: 'network' };
   }

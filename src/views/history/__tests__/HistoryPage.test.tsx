@@ -461,6 +461,192 @@ describe('HistoryPage - 다수 아이템', () => {
   });
 });
 
+// ── Search & Sort ─────────────────────────────────────
+
+describe('HistoryPage - 검색', () => {
+  it('히스토리가 있을 때 검색 입력 필드가 표시됨', () => {
+    setHistories([createHistory()]);
+    render(<HistoryPage />);
+    expect(screen.getByLabelText('정산 기록 검색')).toBeInTheDocument();
+  });
+
+  it('히스토리가 없을 때 검색 입력 필드가 표시되지 않음', () => {
+    render(<HistoryPage />);
+    expect(screen.queryByLabelText('정산 기록 검색')).not.toBeInTheDocument();
+  });
+
+  it('참여자 이름으로 검색 필터링', async () => {
+    const user = userEvent.setup();
+    const h1 = createHistory({ id: 'h1', title: '첫번째', memberNames: ['앨리스', '밥'] });
+    const h2 = createHistory({ id: 'h2', title: '두번째', memberNames: ['찰리', '다이앤'] });
+    setHistories([h1, h2]);
+
+    render(<HistoryPage />);
+
+    const searchInput = screen.getByLabelText('정산 기록 검색');
+    await user.type(searchInput, '앨리스');
+
+    const cards = screen.getAllByRole('button', { name: /정산 기록$/ });
+    expect(cards).toHaveLength(1);
+    expect(screen.getByText('앨리스, 밥')).toBeInTheDocument();
+  });
+
+  it('제목으로 검색 필터링', async () => {
+    const user = userEvent.setup();
+    const h1 = createHistory({ id: 'h1', title: '회식 정산' });
+    const h2 = createHistory({ id: 'h2', title: '여행 정산' });
+    setHistories([h1, h2]);
+
+    render(<HistoryPage />);
+
+    const searchInput = screen.getByLabelText('정산 기록 검색');
+    await user.type(searchInput, '회식');
+
+    const cards = screen.getAllByRole('button', { name: /정산 기록$/ });
+    expect(cards).toHaveLength(1);
+  });
+
+  it('검색 결과가 없으면 빈 검색 결과 메시지를 표시', async () => {
+    const user = userEvent.setup();
+    setHistories([createHistory()]);
+
+    render(<HistoryPage />);
+
+    const searchInput = screen.getByLabelText('정산 기록 검색');
+    await user.type(searchInput, '존재하지않는이름');
+
+    expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
+  });
+
+  it('검색은 대소문자를 구분하지 않음', async () => {
+    const user = userEvent.setup();
+    const h1 = createHistory({ id: 'h1', title: 'ABC 정산', memberNames: ['Alice'] });
+    setHistories([h1]);
+
+    render(<HistoryPage />);
+
+    const searchInput = screen.getByLabelText('정산 기록 검색');
+    await user.type(searchInput, 'alice');
+
+    const cards = screen.getAllByRole('button', { name: /정산 기록$/ });
+    expect(cards).toHaveLength(1);
+  });
+});
+
+describe('HistoryPage - 정렬', () => {
+  it('정렬 칩 3개가 표시됨 (최신순, 오래된순, 금액 높은순)', () => {
+    setHistories([createHistory()]);
+    render(<HistoryPage />);
+
+    expect(screen.getByText('최신순')).toBeInTheDocument();
+    expect(screen.getByText('오래된순')).toBeInTheDocument();
+    expect(screen.getByText('금액 높은순')).toBeInTheDocument();
+  });
+
+  it('기본 정렬은 최신순 (newest)', () => {
+    setHistories([createHistory()]);
+    render(<HistoryPage />);
+
+    const newestChip = screen.getByText('최신순').closest('button');
+    expect(newestChip).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('오래된순 클릭 시 정렬 변경', async () => {
+    const user = userEvent.setup();
+    const h1 = createHistory({ id: 'h1', title: '오래된것', createdAt: new Date(2024, 0, 1).getTime() });
+    const h2 = createHistory({ id: 'h2', title: '최신것', createdAt: new Date(2024, 5, 1).getTime() });
+    setHistories([h1, h2]);
+
+    render(<HistoryPage />);
+
+    await user.click(screen.getByText('오래된순'));
+
+    const cards = screen.getAllByRole('button', { name: /정산 기록$/ });
+    // 오래된순이므로 '오래된것'이 먼저
+    expect(cards[0]).toHaveAttribute('aria-label', '오래된것 정산 기록');
+    expect(cards[1]).toHaveAttribute('aria-label', '최신것 정산 기록');
+  });
+
+  it('최신순 클릭 시 최신 항목이 먼저 표시', async () => {
+    const user = userEvent.setup();
+    const h1 = createHistory({ id: 'h1', title: '오래된것', createdAt: new Date(2024, 0, 1).getTime() });
+    const h2 = createHistory({ id: 'h2', title: '최신것', createdAt: new Date(2024, 5, 1).getTime() });
+    setHistories([h1, h2]);
+
+    render(<HistoryPage />);
+
+    // 먼저 오래된순으로 변경 후 다시 최신순으로
+    await user.click(screen.getByText('오래된순'));
+    await user.click(screen.getByText('최신순'));
+
+    const cards = screen.getAllByRole('button', { name: /정산 기록$/ });
+    expect(cards[0]).toHaveAttribute('aria-label', '최신것 정산 기록');
+    expect(cards[1]).toHaveAttribute('aria-label', '오래된것 정산 기록');
+  });
+
+  it('금액 높은순 클릭 시 금액이 높은 항목이 먼저 표시', async () => {
+    const user = userEvent.setup();
+    const h1 = createHistory({ id: 'h1', title: '적은금액', totalAmount: 50000 });
+    const h2 = createHistory({ id: 'h2', title: '큰금액', totalAmount: 200000 });
+    setHistories([h1, h2]);
+
+    render(<HistoryPage />);
+
+    await user.click(screen.getByText('금액 높은순'));
+
+    const cards = screen.getAllByRole('button', { name: /정산 기록$/ });
+    expect(cards[0]).toHaveAttribute('aria-label', '큰금액 정산 기록');
+    expect(cards[1]).toHaveAttribute('aria-label', '적은금액 정산 기록');
+  });
+
+  it('히스토리가 없을 때 정렬 칩이 표시되지 않음', () => {
+    render(<HistoryPage />);
+    expect(screen.queryByText('최신순')).not.toBeInTheDocument();
+  });
+});
+
+describe('HistoryPage - 검색 + 정렬 조합', () => {
+  it('검색 후 정렬이 적용됨', async () => {
+    const user = userEvent.setup();
+    const h1 = createHistory({
+      id: 'h1',
+      title: '회식A',
+      memberNames: ['앨리스'],
+      totalAmount: 50000,
+      createdAt: new Date(2024, 0, 1).getTime(),
+    });
+    const h2 = createHistory({
+      id: 'h2',
+      title: '회식B',
+      memberNames: ['앨리스', '밥'],
+      totalAmount: 150000,
+      createdAt: new Date(2024, 5, 1).getTime(),
+    });
+    const h3 = createHistory({
+      id: 'h3',
+      title: '여행',
+      memberNames: ['찰리'],
+      totalAmount: 300000,
+      createdAt: new Date(2024, 3, 1).getTime(),
+    });
+    setHistories([h1, h2, h3]);
+
+    render(<HistoryPage />);
+
+    // 검색으로 '회식' 필터링 → h1, h2만 남음
+    const searchInput = screen.getByLabelText('정산 기록 검색');
+    await user.type(searchInput, '회식');
+
+    // 금액 높은순 정렬 → h2(150000) > h1(50000)
+    await user.click(screen.getByText('금액 높은순'));
+
+    const cards = screen.getAllByRole('button', { name: /정산 기록$/ });
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveAttribute('aria-label', '회식B 정산 기록');
+    expect(cards[1]).toHaveAttribute('aria-label', '회식A 정산 기록');
+  });
+});
+
 // ── Animation ───────────────────────────────────────
 
 describe('HistoryPage - 애니메이션', () => {

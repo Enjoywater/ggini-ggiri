@@ -17,3 +17,4 @@ export { TransitionLink } from './TransitionLink';
 export { StickyBottomBar } from './StickyBottomBar';
 export { Skeleton, MainPageSkeleton, SettlementPageSkeleton } from './Skeleton';
 export { EmptyState } from './EmptyState';
+export { CelebrationBanner } from './CelebrationBanner';

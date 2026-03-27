@@ -126,7 +126,7 @@ describe('SettlementPage - 송금 요약', () => {
     setupBasicSettlement();
     render(<SettlementPage />);
     // formatAmount은 "50,000원" 형태로 렌더
-    const transferBtns = screen.getAllByLabelText(/송금 완료 토글/);
+    const transferBtns = screen.getAllByLabelText(/송금 완료 표시/);
     expect(transferBtns.length).toBeGreaterThan(0);
   });
 
@@ -157,7 +157,7 @@ describe('SettlementPage - 송금 요약', () => {
     setupBasicSettlement();
     render(<SettlementPage />);
 
-    const transferBtn = screen.getByLabelText(/송금 완료 토글/);
+    const transferBtn = screen.getByLabelText(/송금 완료 표시/);
     await user.click(transferBtn);
 
     expect(screen.getByText(/1\/1 완료/)).toBeInTheDocument();
@@ -168,9 +168,9 @@ describe('SettlementPage - 송금 요약', () => {
     setupBasicSettlement();
     render(<SettlementPage />);
 
-    const transferBtn = screen.getByLabelText(/송금 완료 토글/);
+    const transferBtn = screen.getByLabelText(/송금 완료 표시/);
     await user.click(transferBtn);
-    await user.click(transferBtn);
+    await user.click(screen.getByLabelText(/송금 완료 해제/));
 
     expect(screen.getByText(/0\/1 완료/)).toBeInTheDocument();
   });
@@ -181,7 +181,7 @@ describe('SettlementPage - 송금 요약', () => {
     render(<SettlementPage />);
 
     // 완료 표시
-    await user.click(screen.getByLabelText(/송금 완료 토글/));
+    await user.click(screen.getByLabelText(/송금 완료 표시/));
     expect(screen.getByText(/1\/1 완료/)).toBeInTheDocument();
 
     // 초기화

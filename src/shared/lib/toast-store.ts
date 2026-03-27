@@ -13,6 +13,7 @@ interface ToastState {
 }
 
 let toastCounter = 0;
+const timerMap = new Map<string, ReturnType<typeof setTimeout>>();
 
 function calcDuration(message: string, type: ToastItem['type']): number {
   const base = 2000 + (message.length / 5.8) * 1000;
@@ -28,14 +29,19 @@ export const useToastStore = create<ToastState>((set) => ({
       toasts: [...state.toasts.slice(-2), { id, message, type }],
     }));
     const duration = calcDuration(message, type);
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      timerMap.delete(id);
       set((state) => ({
         toasts: state.toasts.filter((t) => t.id !== id),
       }));
     }, duration);
+    timerMap.set(id, timer);
   },
-  removeToast: (id) =>
+  removeToast: (id) => {
+    clearTimeout(timerMap.get(id));
+    timerMap.delete(id);
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
-    })),
+    }));
+  },
 }));

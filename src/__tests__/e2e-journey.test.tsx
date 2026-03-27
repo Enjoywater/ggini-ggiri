@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
@@ -7,7 +7,10 @@ import { usePresetStore } from '@/entities/preset';
 import { useTransferCompletionStore, getTransferKey } from '@/entities/transfer-completion';
 import { settle, calculateBalance, optimizeTransfers } from '@/features/calculate';
 import { buildSettlementText } from '@/features/share';
+import { buildExportData } from '@/features/export-import/lib/export';
+import { extractHistory } from '@/features/export-import/lib/import';
 import { formatAmount } from '@/shared/lib/formatters';
+import { useUndoStore } from '@/shared/lib/undo-store';
 import type { Member } from '@/shared/types';
 import Big from 'big.js';
 
@@ -23,6 +26,7 @@ beforeEach(() => {
   useHistoryStore.getState().clearAll();
   usePresetStore.getState().reset();
   useTransferCompletionStore.getState().reset();
+  useUndoStore.getState().clearUndo();
 });
 
 // ── Journey 1: 기본 정산 플로우 ──────────────────────
@@ -686,5 +690,470 @@ describe('E2E: 엣지 케이스', () => {
     // 비음주자(찰리)는 술값 0
     const charlieResult = results.find((r) => r.memberName === '찰리');
     expect(charlieResult!.details[0].alcoholAmount).toBe(0);
+  });
+});
+
+// ── Journey 10: 멤버 삭제 → Undo → 완전 복원 ─────────
+
+describe('E2E: 멤버 삭제 Undo → 완전 복원', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('멤버 삭제 후 Undo 시 멤버 + 세션 완전 복원', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+    const charlie = useMemberStore.getState().addMember('찰리');
+
+    useSessionStore.getState().addSession({
+      title: '1차 고기집',
+      totalAmount: 90000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id, charlie.id],
+      alcohol: {
+        unitPrice: 5000,
+        quantity: 2,
+        drinkerIds: [bob.id, charlie.id],
+      },
+    });
+
+    // 삭제 전 스냅샷
+    const membersBefore = useMemberStore.getState().members.length;
+
+    // 밥 삭제 (cascade: 세션 참여자/음주자에서 제거)
+    const sessionsSnapshot = JSON.parse(JSON.stringify(useSessionStore.getState().sessions));
+    const memberSnapshot = useMemberStore.getState().members.find(m => m.id === bob.id)!;
+
+    useSessionStore.getState().removeMemberFromSessions(bob.id);
+    useMemberStore.getState().removeMember(bob.id);
+
+    // Undo 등록
+    useUndoStore.getState().pushUndo(`'밥' 삭제됨`, () => {
+      useMemberStore.setState((state) => ({
+        members: [...state.members, memberSnapshot],
+      }));
+      useSessionStore.setState({ sessions: sessionsSnapshot });
+    });
+
+    // 삭제 확인
+    expect(useMemberStore.getState().members).toHaveLength(membersBefore - 1);
+    expect(useMemberStore.getState().members.find(m => m.name === '밥')).toBeUndefined();
+
+    // Undo 실행
+    useUndoStore.getState().executeUndo();
+
+    // 복원 확인
+    expect(useMemberStore.getState().members).toHaveLength(membersBefore);
+    expect(useMemberStore.getState().members.find(m => m.name === '밥')).toBeDefined();
+
+    const sessionsAfter = useSessionStore.getState().sessions;
+    expect(sessionsAfter[0].participantIds).toContain(bob.id);
+    expect(sessionsAfter[0].alcohol?.drinkerIds).toContain(bob.id);
+    expect(sessionsAfter[0].payerId).toBe(alice.id);
+  });
+
+  it('결제자(Payer) 삭제 후 Undo 시 원래 결제자로 복원', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+
+    useSessionStore.getState().addSession({
+      title: '1차',
+      totalAmount: 50000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id],
+    });
+
+    // 삭제 전 스냅샷
+    const sessionsSnapshot = JSON.parse(JSON.stringify(useSessionStore.getState().sessions));
+    const memberSnapshot = useMemberStore.getState().members.find(m => m.id === alice.id)!;
+
+    // 앨리스(결제자) 삭제 → payerId가 bob으로 변경됨
+    useSessionStore.getState().removeMemberFromSessions(alice.id);
+    useMemberStore.getState().removeMember(alice.id);
+
+    expect(useSessionStore.getState().sessions[0].payerId).toBe(bob.id);
+
+    // Undo 등록 & 실행
+    useUndoStore.getState().pushUndo(`'앨리스' 삭제됨`, () => {
+      useMemberStore.setState((state) => ({
+        members: [...state.members, memberSnapshot],
+      }));
+      useSessionStore.setState({ sessions: sessionsSnapshot });
+    });
+    useUndoStore.getState().executeUndo();
+
+    // 원래 결제자(앨리스)로 복원 확인
+    expect(useSessionStore.getState().sessions[0].payerId).toBe(alice.id);
+    expect(useSessionStore.getState().sessions[0].participantIds).toContain(alice.id);
+  });
+});
+
+// ── Journey 11: 세션 삭제 → Undo → 원래 위치 복원 ────
+
+describe('E2E: 세션 삭제 Undo → 원래 위치 복원', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('중간 세션 삭제 후 Undo 시 원래 순서 복원', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+
+    useSessionStore.getState().addSession({ title: '1차', totalAmount: 30000, payerId: alice.id, participantIds: [alice.id, bob.id] });
+    useSessionStore.getState().addSession({ title: '2차', totalAmount: 50000, payerId: bob.id, participantIds: [alice.id, bob.id] });
+    useSessionStore.getState().addSession({ title: '3차', totalAmount: 20000, payerId: alice.id, participantIds: [alice.id, bob.id] });
+
+    const sessions = useSessionStore.getState().sessions;
+    const targetSession = sessions[1]; // 2차
+    const targetIndex = 1;
+
+    // 2차 삭제
+    const sessionSnapshot = JSON.parse(JSON.stringify(targetSession));
+    useSessionStore.getState().removeSession(targetSession.id);
+
+    expect(useSessionStore.getState().sessions).toHaveLength(2);
+
+    // Undo 등록 & 실행
+    useUndoStore.getState().pushUndo(`'2차' 삭제됨`, () => {
+      useSessionStore.setState((state) => {
+        const next = [...state.sessions];
+        next.splice(Math.min(targetIndex, next.length), 0, sessionSnapshot);
+        return { sessions: next };
+      });
+    });
+    useUndoStore.getState().executeUndo();
+
+    // 복원 확인: 3개 세션, 원래 순서
+    const restored = useSessionStore.getState().sessions;
+    expect(restored).toHaveLength(3);
+    expect(restored[0].title).toBe('1차');
+    expect(restored[1].title).toBe('2차');
+    expect(restored[2].title).toBe('3차');
+    expect(restored[1].totalAmount).toBe(50000);
+    expect(restored[1].payerId).toBe(bob.id);
+  });
+
+  it('연속 삭제 시 마지막 삭제만 Undo 가능', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+
+    useSessionStore.getState().addSession({ title: '1차', totalAmount: 10000, payerId: alice.id, participantIds: [alice.id] });
+    useSessionStore.getState().addSession({ title: '2차', totalAmount: 20000, payerId: alice.id, participantIds: [alice.id] });
+    useSessionStore.getState().addSession({ title: '3차', totalAmount: 30000, payerId: alice.id, participantIds: [alice.id] });
+
+    const sessions = useSessionStore.getState().sessions;
+
+    // 1차 삭제 → Undo 등록
+    const snap1 = JSON.parse(JSON.stringify(sessions[0]));
+    useSessionStore.getState().removeSession(sessions[0].id);
+    useUndoStore.getState().pushUndo(`'1차' 삭제됨`, () => {
+      useSessionStore.setState((state) => ({
+        sessions: [snap1, ...state.sessions],
+      }));
+    });
+
+    // 2차 삭제 → Undo 덮어씀 (1차 Undo 소멸)
+    const currentSessions = useSessionStore.getState().sessions;
+    const snap2 = JSON.parse(JSON.stringify(currentSessions[0])); // 이제 2차가 첫번째
+    useSessionStore.getState().removeSession(currentSessions[0].id);
+    useUndoStore.getState().pushUndo(`'2차' 삭제됨`, () => {
+      useSessionStore.setState((state) => ({
+        sessions: [snap2, ...state.sessions],
+      }));
+    });
+
+    expect(useSessionStore.getState().sessions).toHaveLength(1);
+    expect(useSessionStore.getState().sessions[0].title).toBe('3차');
+
+    // Undo → 2차만 복원됨 (1차는 복원 불가)
+    useUndoStore.getState().executeUndo();
+    const restored = useSessionStore.getState().sessions;
+    expect(restored).toHaveLength(2);
+    expect(restored.find(s => s.title === '2차')).toBeDefined();
+    expect(restored.find(s => s.title === '1차')).toBeUndefined(); // 1차는 복원 불가
+  });
+});
+
+// ── Journey 12: 송금 전체 완료 감지 ──────────────────
+
+describe('E2E: 송금 전체 완료 감지', () => {
+  it('모든 송금 완료 시 전체 완료 상태', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+    const charlie = useMemberStore.getState().addMember('찰리');
+
+    useSessionStore.getState().addSession({
+      title: '1차',
+      totalAmount: 90000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id, charlie.id],
+    });
+
+    const members = useMemberStore.getState().members;
+    const sessions = useSessionStore.getState().sessions;
+    const balances = calculateBalance(sessions, members);
+    const transfers = optimizeTransfers(balances);
+
+    // 송금 2건 예상 (bob→alice, charlie→alice)
+    expect(transfers.length).toBeGreaterThanOrEqual(1);
+
+    // 하나씩 완료 처리
+    for (const t of transfers) {
+      const key = getTransferKey(t.from, t.to, t.amount);
+      useTransferCompletionStore.getState().toggleCompletion(key);
+    }
+
+    // 전체 완료 확인
+    const completions = useTransferCompletionStore.getState().completions;
+    const allComplete = transfers.length > 0 && transfers.every(t => {
+      const key = getTransferKey(t.from, t.to, t.amount);
+      return !!completions[key];
+    });
+    expect(allComplete).toBe(true);
+  });
+
+  it('하나라도 미완료 시 전체 완료 아님', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+    const charlie = useMemberStore.getState().addMember('찰리');
+
+    useSessionStore.getState().addSession({
+      title: '1차',
+      totalAmount: 90000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id, charlie.id],
+    });
+
+    const members = useMemberStore.getState().members;
+    const sessions = useSessionStore.getState().sessions;
+    const balances = calculateBalance(sessions, members);
+    const transfers = optimizeTransfers(balances);
+
+    // 첫 번째만 완료
+    if (transfers.length > 0) {
+      const key = getTransferKey(transfers[0].from, transfers[0].to, transfers[0].amount);
+      useTransferCompletionStore.getState().toggleCompletion(key);
+    }
+
+    // 전체 완료 아님
+    if (transfers.length > 1) {
+      const completions = useTransferCompletionStore.getState().completions;
+      const allComplete = transfers.every(t => {
+        const key = getTransferKey(t.from, t.to, t.amount);
+        return !!completions[key];
+      });
+      expect(allComplete).toBe(false);
+    }
+  });
+});
+
+// ── Journey 13: Undo 후 정산 결과 일관성 ────────────
+
+describe('E2E: Undo 후 정산 결과 일관성', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('멤버 삭제 → Undo → settle() 결과가 삭제 전과 동일', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+    const charlie = useMemberStore.getState().addMember('찰리');
+
+    useSessionStore.getState().addSession({
+      title: '1차 삼겹살',
+      totalAmount: 150000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id, charlie.id],
+      alcohol: {
+        unitPrice: 5000,
+        quantity: 3,
+        drinkerIds: [alice.id, bob.id],
+      },
+    });
+
+    useSessionStore.getState().addSession({
+      title: '2차 노래방',
+      totalAmount: 45000,
+      payerId: bob.id,
+      participantIds: [alice.id, bob.id, charlie.id],
+    });
+
+    // 삭제 전 정산 결과 저장
+    const membersBefore = useMemberStore.getState().members;
+    const sessionsBefore = useSessionStore.getState().sessions;
+    const resultsBefore = settle(sessionsBefore, membersBefore);
+    const balancesBefore = calculateBalance(sessionsBefore, membersBefore);
+    const transfersBefore = optimizeTransfers(balancesBefore);
+
+    // 찰리 삭제 (cascade)
+    const sessionsSnapshot = JSON.parse(JSON.stringify(sessionsBefore));
+    const memberSnapshot = membersBefore.find((m) => m.id === charlie.id)!;
+
+    useSessionStore.getState().removeMemberFromSessions(charlie.id);
+    useMemberStore.getState().removeMember(charlie.id);
+
+    // Undo 등록 & 실행
+    useUndoStore.getState().pushUndo(`'찰리' 삭제됨`, () => {
+      useMemberStore.setState((state) => ({
+        members: [...state.members, memberSnapshot],
+      }));
+      useSessionStore.setState({ sessions: sessionsSnapshot });
+    });
+    useUndoStore.getState().executeUndo();
+
+    // Undo 후 정산 결과
+    const membersAfter = useMemberStore.getState().members;
+    const sessionsAfter = useSessionStore.getState().sessions;
+    const resultsAfter = settle(sessionsAfter, membersAfter);
+    const balancesAfter = calculateBalance(sessionsAfter, membersAfter);
+    const transfersAfter = optimizeTransfers(balancesAfter);
+
+    // 정산 결과 동일성 검증
+    expect(resultsAfter).toHaveLength(resultsBefore.length);
+
+    for (const before of resultsBefore) {
+      const after = resultsAfter.find((r) => r.memberId === before.memberId);
+      expect(after).toBeDefined();
+      expect(after!.totalAmount).toBe(before.totalAmount);
+      expect(after!.details).toHaveLength(before.details.length);
+      for (let i = 0; i < before.details.length; i++) {
+        expect(after!.details[i].baseAmount).toBe(before.details[i].baseAmount);
+        expect(after!.details[i].alcoholAmount).toBe(before.details[i].alcoholAmount);
+      }
+    }
+
+    // 송금 경로 동일성
+    expect(transfersAfter).toHaveLength(transfersBefore.length);
+    for (const tb of transfersBefore) {
+      const ta = transfersAfter.find(
+        (t) => t.from === tb.from && t.to === tb.to,
+      );
+      expect(ta).toBeDefined();
+      expect(ta!.amount).toBe(tb.amount);
+    }
+
+    // 잔액 합 = 0
+    let sum = new Big(0);
+    balancesAfter.forEach((b) => (sum = sum.plus(b)));
+    expect(Number(sum)).toBe(0);
+  });
+});
+
+// ── Journey 14: Export → Import 왕복 일관성 ─────────
+
+describe('E2E: Export → Import 왕복 일관성', () => {
+  it('복잡한 정산 데이터를 Export → Import 후 정산 결과 동일', () => {
+    const alice = useMemberStore.getState().addMember('앨리스');
+    const bob = useMemberStore.getState().addMember('밥');
+    const charlie = useMemberStore.getState().addMember('찰리');
+
+    useSessionStore.getState().addSession({
+      title: '1차 고기집',
+      totalAmount: 210000,
+      payerId: alice.id,
+      participantIds: [alice.id, bob.id, charlie.id],
+      alcohol: {
+        unitPrice: 8000,
+        quantity: 5,
+        drinkerIds: [alice.id, charlie.id],
+      },
+    });
+
+    useSessionStore.getState().addSession({
+      title: '2차 바',
+      totalAmount: 90000,
+      payerId: bob.id,
+      participantIds: [alice.id, bob.id],
+    });
+
+    const members = useMemberStore.getState().members;
+    const sessions = useSessionStore.getState().sessions;
+    const results = settle(sessions, members);
+    const balances = calculateBalance(sessions, members);
+    const transfers = optimizeTransfers(balances);
+
+    // 히스토리에 저장
+    useHistoryStore.getState().addHistory({
+      title: '2026.03.27 회식',
+      memberNames: members.map((m) => m.name),
+      totalAmount: 300000,
+      sessionCount: 2,
+      members: [...members],
+      sessions: [...sessions],
+      results: [...results],
+      transfers: transfers.map((t) => ({
+        from: t.from,
+        to: t.to,
+        amount: t.amount,
+      })),
+    });
+
+    // Export
+    const histories = useHistoryStore.getState().histories;
+    const exportData = buildExportData(histories);
+
+    // 전체 초기화
+    useMemberStore.getState().reset();
+    useSessionStore.getState().reset();
+    useHistoryStore.getState().clearAll();
+    expect(useHistoryStore.getState().histories).toHaveLength(0);
+
+    // Import
+    const imported = extractHistory(exportData);
+    for (const h of imported) {
+      useHistoryStore.getState().addHistory(h);
+    }
+
+    // Import된 히스토리에서 정산 재계산
+    const importedHistory = useHistoryStore.getState().histories[0];
+    expect(importedHistory).toBeDefined();
+    expect(importedHistory.memberNames).toEqual(['앨리스', '밥', '찰리']);
+    expect(importedHistory.sessionCount).toBe(2);
+
+    const importedResults = settle(
+      importedHistory.sessions,
+      importedHistory.members,
+    );
+    const importedBalances = calculateBalance(
+      importedHistory.sessions,
+      importedHistory.members,
+    );
+    const importedTransfers = optimizeTransfers(importedBalances);
+
+    // 정산 결과 동일성
+    expect(importedResults).toHaveLength(results.length);
+    for (const original of results) {
+      const reimported = importedResults.find(
+        (r) => r.memberId === original.memberId,
+      );
+      expect(reimported).toBeDefined();
+      expect(reimported!.totalAmount).toBe(original.totalAmount);
+    }
+
+    // 송금 경로 동일성
+    expect(importedTransfers).toHaveLength(transfers.length);
+    for (const original of transfers) {
+      const reimported = importedTransfers.find(
+        (t) => t.from === original.from && t.to === original.to,
+      );
+      expect(reimported).toBeDefined();
+      expect(reimported!.amount).toBe(original.amount);
+    }
+
+    // 잔액 합 = 0
+    let sum = new Big(0);
+    importedBalances.forEach((b) => (sum = sum.plus(b)));
+    expect(Number(sum)).toBe(0);
   });
 });

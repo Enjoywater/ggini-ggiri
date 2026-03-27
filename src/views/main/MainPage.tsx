@@ -6,12 +6,13 @@ import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
 import { useAccountStore } from '@/entities/account';
 import { usePresetStore } from '@/entities/preset';
-import type { MemberPreset } from '@/shared/types';
+import type { MemberPreset, Session } from '@/shared/types';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { PASTEL_COLORS } from '@/shared/lib';
 import { useModalManager } from '@/shared/lib/use-modal-manager';
 import { formatAmount } from '@/shared/lib/formatters';
 import { useToast } from '@/shared/lib/use-toast';
+import { useUndoStore } from '@/shared/lib/undo-store';
 import { SessionCard } from '@/widgets/session-card';
 import { useNewItemIds } from '@/shared/lib/use-animate-list';
 import { useOnboardingStore } from '@/entities/onboarding';
@@ -50,6 +51,7 @@ export function MainPage() {
   const removePreset = usePresetStore((s) => s.removePreset);
   const modal = useModalManager(MODAL_KEYS);
   const toast = useToast();
+  const pushUndo = useUndoStore((s) => s.pushUndo);
 
   const [newName, setNewName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
@@ -144,8 +146,32 @@ export function MainPage() {
   const confirmDelete = () => {
     const pendingDeleteId = modal.getData<string>('delete');
     if (pendingDeleteId) {
+      const memberSnapshot = members.find((m) => m.id === pendingDeleteId);
+      if (!memberSnapshot) {
+        modal.close('delete');
+        return;
+      }
+
+      // 세션 전체 스냅샷 (deep copy for nested alcohol object)
+      const sessionsSnapshot: Session[] = JSON.parse(
+        JSON.stringify(useSessionStore.getState().sessions),
+      );
+
+      // 삭제 실행
       removeMemberFromSessions(pendingDeleteId);
       removeMember(pendingDeleteId);
+
+      // Undo 등록
+      pushUndo(`'${memberSnapshot.name}' 삭제됨`, () => {
+        // 이미 복원되어 있는지 체크
+        const currentMembers = useMemberStore.getState().members;
+        if (currentMembers.find(m => m.id === memberSnapshot.id)) return;
+
+        useMemberStore.setState((state) => ({
+          members: [...state.members, memberSnapshot],
+        }));
+        useSessionStore.setState({ sessions: sessionsSnapshot });
+      });
     }
     modal.close('delete');
   };
@@ -170,7 +196,32 @@ export function MainPage() {
   const confirmDeleteSession = () => {
     const pendingDeleteSessionId = modal.getData<string>('deleteSession');
     if (pendingDeleteSessionId) {
+      const currentSessions = useSessionStore.getState().sessions;
+      const sessionIndex = currentSessions.findIndex(
+        (s) => s.id === pendingDeleteSessionId,
+      );
+      const sessionSnapshot: Session | undefined =
+        sessionIndex !== -1
+          ? JSON.parse(JSON.stringify(currentSessions[sessionIndex]))
+          : undefined;
+
+      // 삭제 실행
       removeSession(pendingDeleteSessionId);
+
+      // Undo 등록
+      if (sessionSnapshot) {
+        pushUndo(`'${sessionSnapshot.title}' 삭제됨`, () => {
+          useSessionStore.setState((state) => {
+            const next = [...state.sessions];
+            next.splice(
+              Math.min(sessionIndex, next.length),
+              0,
+              sessionSnapshot,
+            );
+            return { sessions: next };
+          });
+        });
+      }
     }
     modal.close('deleteSession');
   };
@@ -311,7 +362,7 @@ export function MainPage() {
                   </Chip>
                   <button
                     type="button"
-                    className="-ml-1 inline-flex items-center justify-center rounded-full p-1.5 -m-1 text-text-muted hover:text-danger-dark hover:bg-danger/10 transition-colors"
+                    className="-ml-1 inline-flex items-center justify-center rounded-full min-w-[44px] min-h-[44px] p-2 text-text-muted hover:text-danger-dark hover:bg-danger/10 transition-colors"
                     onClick={() => handleRemoveMember(member.id)}
                     aria-label={`${member.name} 삭제`}
                   >

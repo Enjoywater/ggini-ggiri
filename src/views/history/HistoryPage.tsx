@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Button, LinkButton, Card, Modal, EmptyState } from '@/shared/ui';
+import { useState, useMemo } from 'react';
+import { Button, LinkButton, Card, Modal, EmptyState, Input, Chip } from '@/shared/ui';
+import { useShallow } from 'zustand/react/shallow';
 import { useHistoryStore } from '@/entities/history';
 import { useHydration } from '@/shared/lib/use-hydration';
 import { SettlementResult } from '@/widgets/settlement-result';
@@ -63,9 +64,39 @@ function HistoryDetail({ history }: { history: SettlementHistory }) {
 
 export function HistoryPage() {
   const hydrated = useHydration();
-  const { histories, removeHistory } = useHistoryStore();
+  const { histories, removeHistory } = useHistoryStore(
+    useShallow((s) => ({ histories: s.histories, removeHistory: s.removeHistory }))
+  );
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortKey, setSortKey] = useState<'newest' | 'oldest' | 'amount-high'>('newest');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const filteredHistories = useMemo(() => {
+    let result = histories;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter((h) =>
+        h.memberNames.some((name) => name.toLowerCase().includes(q)) ||
+        h.title.toLowerCase().includes(q)
+      );
+    }
+
+    const sorted = [...result];
+    switch (sortKey) {
+      case 'newest':
+        sorted.sort((a, b) => b.createdAt - a.createdAt);
+        break;
+      case 'oldest':
+        sorted.sort((a, b) => a.createdAt - b.createdAt);
+        break;
+      case 'amount-high':
+        sorted.sort((a, b) => b.totalAmount - a.totalAmount);
+        break;
+    }
+    return sorted;
+  }, [histories, searchQuery, sortKey]);
 
   const handleToggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -104,14 +135,44 @@ export function HistoryPage() {
         <h1 className="text-xl font-bold text-text-primary">정산 기록</h1>
       </div>
 
+      {/* Search & Sort */}
+      {histories.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <Input
+            placeholder="참여자 이름 또는 제목으로 검색"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="정산 기록 검색"
+          />
+          <div className="flex flex-wrap gap-2">
+            {([
+              { key: 'newest' as const, label: '최신순' },
+              { key: 'oldest' as const, label: '오래된순' },
+              { key: 'amount-high' as const, label: '금액 높은순' },
+            ]).map((opt) => (
+              <Chip
+                key={opt.key}
+                selected={sortKey === opt.key}
+                color="sky"
+                onClick={() => setSortKey(opt.key)}
+              >
+                {opt.label}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* History List */}
       {histories.length === 0 ? (
         <Card className="text-center">
           <EmptyState illustration="history" message="아직 정산 기록이 없습니다" />
         </Card>
+      ) : filteredHistories.length === 0 ? (
+        <EmptyState illustration="history" message="검색 결과가 없습니다" />
       ) : (
         <div className="flex flex-col gap-3">
-          {histories.map((history) => (
+          {filteredHistories.map((history) => (
             <Card
               key={history.id}
               className="cursor-pointer transition-colors hover:bg-surface"
@@ -125,6 +186,7 @@ export function HistoryPage() {
               tabIndex={0}
               role="button"
               aria-expanded={expandedId === history.id}
+              aria-controls={`history-detail-${history.id}`}
               aria-label={`${history.title} 정산 기록`}
             >
               <div className="flex items-start justify-between gap-2">
@@ -155,7 +217,9 @@ export function HistoryPage() {
               </div>
 
               {expandedId === history.id && (
-                <HistoryDetail history={history} />
+                <div id={`history-detail-${history.id}`}>
+                  <HistoryDetail history={history} />
+                </div>
               )}
             </Card>
           ))}

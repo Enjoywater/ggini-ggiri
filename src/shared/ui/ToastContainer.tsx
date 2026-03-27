@@ -1,6 +1,7 @@
 'use client';
 
 import { useToastStore } from '@/shared/lib/toast-store';
+import { useUndoStore } from '@/shared/lib/undo-store';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -13,6 +14,8 @@ const typeStyles: Record<string, string> = {
 export function ToastContainer() {
   const toasts = useToastStore((s) => s.toasts);
   const removeToast = useToastStore((s) => s.removeToast);
+  const undoPending = useUndoStore((s) => s.pending);
+  const executeUndo = useUndoStore((s) => s.executeUndo);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -20,7 +23,7 @@ export function ToastContainer() {
     setMounted(true);
   }, []);
 
-  if (!mounted || toasts.length === 0) return null;
+  if (!mounted || (toasts.length === 0 && !undoPending)) return null;
 
   return createPortal(
     <div
@@ -50,6 +53,25 @@ export function ToastContainer() {
           </div>
         </div>
       ))}
+      {undoPending && (
+        <div
+          className="pointer-events-auto animate-toast-in rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface-elevated)] px-4 py-3 text-sm shadow-lg"
+          role="status"
+          aria-live="assertive"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[var(--color-text-primary)] font-medium">{undoPending.label}</span>
+            <button
+              type="button"
+              className="rounded-lg bg-[var(--color-primary)] px-3 py-1 font-bold text-white transition-colors hover:opacity-90"
+              onClick={executeUndo}
+              aria-label="삭제 실행취소"
+            >
+              실행취소
+            </button>
+          </div>
+        </div>
+      )}
     </div>,
     document.body,
   );

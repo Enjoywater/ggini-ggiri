@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, LinkButton, Input, Card, CardTitle, Modal, Chip } from '@/shared/ui';
 import { useAccountStore } from '@/entities/account';
+import { useShallow } from 'zustand/react/shallow';
 import { useThemeStore, type ThemeMode } from '@/entities/theme';
 import { useMemberStore } from '@/entities/member';
 import { useSessionStore } from '@/entities/session';
@@ -15,7 +16,9 @@ import { ExportImportButtons } from '@/features/export-import';
 
 export function SettingsPage() {
   const hydrated = useHydration();
-  const { account, setAccount, clearAccount } = useAccountStore();
+  const { account, setAccount, clearAccount } = useAccountStore(
+    useShallow((s) => ({ account: s.account, setAccount: s.setAccount, clearAccount: s.clearAccount }))
+  );
   const members = useMemberStore((s) => s.members);
   const resetMembers = useMemberStore((s) => s.reset);
   const resetSessions = useSessionStore((s) => s.reset);

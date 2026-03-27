@@ -17,7 +17,9 @@ interface SessionCardProps {
 
 export const SessionCard = memo(function SessionCard({ session, index, onRemove, onDuplicate }: SessionCardProps) {
   const members = useMemberStore((s) => s.members);
-  const { updateSession, toggleParticipant, setAlcohol } = useSessionStore();
+  const updateSession = useSessionStore((s) => s.updateSession);
+  const toggleParticipant = useSessionStore((s) => s.toggleParticipant);
+  const setAlcohol = useSessionStore((s) => s.setAlcohol);
   const alcoholEnabled = !!session.alcohol;
 
   const [amountError, setAmountError] = useState<string | null>(null);

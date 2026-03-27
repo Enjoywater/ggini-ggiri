@@ -26,5 +26,7 @@ export { useAnimatedNumber } from './use-animated-number';
 export { useNewItemIds } from './use-animate-list';
 export { useToastStore } from './toast-store';
 export { useToast } from './use-toast';
+export { useUndoStore } from './undo-store';
+export type { UndoEntry } from './undo-store';
 export { navigateWithTransition } from './view-transition';
 export { useModalManager } from './use-modal-manager';
