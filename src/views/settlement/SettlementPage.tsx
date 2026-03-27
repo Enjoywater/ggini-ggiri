@@ -38,30 +38,15 @@ function TransferSummary({
 
   const allComplete = transfers.length > 0 && completedCount === transfers.length;
 
-  // 마운트 스킵 + 전환 감지
-  const isMountRef = useRef(true);
-  const prevCompleteRef = useRef(false);
-  const [celebrating, setCelebrating] = useState(false);
+  // 마운트 시점 기억 + 이전 상태와 비교하여 celebrating 파생
+  const prevCompleteRef = useRef(allComplete);
+  const celebrating =
+    transfers.length > 0 && allComplete && !prevCompleteRef.current;
 
-  useEffect(() => {
-    if (isMountRef.current) {
-      isMountRef.current = false;
-      prevCompleteRef.current = allComplete;
-      return;
-    }
-    if (transfers.length === 0) {
-      setCelebrating(false);
-      prevCompleteRef.current = allComplete;
-      return;
-    }
-    if (allComplete && !prevCompleteRef.current) {
-      setCelebrating(true);
-    }
-    if (!allComplete) {
-      setCelebrating(false);
-    }
+  // ref 업데이트는 렌더 직후 동기적으로 (side-effect 없음)
+  if (prevCompleteRef.current !== allComplete) {
     prevCompleteRef.current = allComplete;
-  }, [allComplete, transfers.length]);
+  }
 
   return (
     <div className="flex flex-col gap-3">
